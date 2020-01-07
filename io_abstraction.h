@@ -13,4 +13,7 @@
 #define MOTOR_IN3 (PTC4)
 #define MOTOR_IN4 (PTD2)
 
+#define R_ENCODER (PTB19)
+#define L_ENCODER (PTC1)
+
 #endif  // IO_ABSTRACTION_H_
