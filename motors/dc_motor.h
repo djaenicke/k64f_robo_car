@@ -1,15 +1,9 @@
-/*
- * DCMotor.h
- *
- *  Created on: Jun 7, 2019
- *      Author: Devin
- */
-
 #ifndef MOTORS_DC_MOTOR_H_
 #define MOTORS_DC_MOTOR_H_
 
 #include "mbed.h"
-#include "io_abstraction.h"
+
+namespace dc_motor {
 
 typedef enum {
   UNKNOWN_DIR = 0,
@@ -37,5 +31,7 @@ class DC_Motor {
   Location_T loc_ = UNKNOWN_LOC;
   Direction_T direction_ = UNKNOWN_DIR;
 };
+
+}  // namespace dc_motor
 
 #endif /* MOTORS_DC_MOTOR_H_ */

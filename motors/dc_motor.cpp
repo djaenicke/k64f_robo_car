@@ -1,11 +1,7 @@
-/*
- * DCMotor.cpp
- *
- *  Created on: Jun 7, 2019
- *      Author: Devin
- */
-
 #include "dc_motor.h"
+#include "io_abstraction.h"
+
+namespace dc_motor {
 
 static PwmOut l_pwm_(MOTOR_ENA);
 static PwmOut r_pwm_(MOTOR_ENB);
@@ -18,14 +14,14 @@ static DigitalOut in4_(MOTOR_IN4);
 DC_Motor::DC_Motor(Location_T new_loc) {
   /* Set the motor position on the robot (right side or left side) */
   switch (new_loc) {
-      case LEFT_SIDE:
-          loc_ = LEFT_SIDE;
-          break;
-      case RIGHT_SIDE:
-          loc_ = RIGHT_SIDE;
-          break;
-      default:
-          loc_ = UNKNOWN_LOC;
+    case LEFT_SIDE:
+        loc_ = LEFT_SIDE;
+        break;
+    case RIGHT_SIDE:
+        loc_ = RIGHT_SIDE;
+        break;
+    default:
+        loc_ = UNKNOWN_LOC;
   }
 }
 
@@ -75,10 +71,10 @@ Direction_T DC_Motor::GetDirection(void) {
 void DC_Motor::SetDC(uint8_t percent) {
   switch (loc_) {
     case LEFT_SIDE:
-      l_pwm_ = percent;
+      l_pwm_ = percent/100.0f;
       break;
     case RIGHT_SIDE:
-      r_pwm_ = percent;
+      r_pwm_ = percent/100.0f;
       break;
     default:
       MBED_ASSERT(false);
@@ -106,3 +102,5 @@ void DC_Motor::Freewheel(void) {
   stopped = false;
   SetDC(0);
 }
+
+}  // namespace dc_motor
