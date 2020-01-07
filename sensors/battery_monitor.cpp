@@ -9,8 +9,7 @@
 
 static AnalogIn ain(VBATT_ADC);
 
-float ReadBatteryVoltage(void)
-{
+float ReadBatteryVoltage(void) {
   return (ain.read() * PERCENT_TO_VOLTS * SCALING);
 }
 
