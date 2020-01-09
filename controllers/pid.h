@@ -5,14 +5,6 @@
 
 namespace pid {
 
-typedef struct {
-  float k_p;
-  float k_i;
-  float k_d;
-  float dt;
-  float tol;
-} PID_Cals_T;
-
 class PID {
  private:
   float kp_;

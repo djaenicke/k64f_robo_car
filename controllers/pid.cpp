@@ -1,5 +1,5 @@
 #include "pid.h"
-#include <math.h>
+#include <cmath>
 
 namespace pid {
 
@@ -15,9 +15,9 @@ PID::PID(float kp, float ki, float kd, float dt, float tol) {
 }
 
 float PID::Step(float sp, float fb, float max, float min) {
-  float u, d;          /* actuator command, derivative  */
+  float u, d;           /* actuator command, derivative  */
   float ti = integral_; /* temporary integral            */
-  float e = sp - fb;   /* error = set point - feed back */
+  float e = sp - fb;    /* error = set point - feed back */
   int8_t sign;
 
   /* Ignore the error if it's smaller than the tolerance */

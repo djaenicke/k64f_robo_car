@@ -41,7 +41,8 @@ void Encoder::ResetPeriodMeas(void) {
 }
 
 float Encoder::GetWheelSpeed(void) {
-  float period_sum, period_avg, speed;
+  float period_sum, period_avg; 
+  float speed = 0;
 
   interrupt_in_.disable_irq();
 
@@ -63,7 +64,9 @@ float Encoder::GetWheelSpeed(void) {
 }
 
 void Encoder::ZeroWheelSpeed(void) {
+  interrupt_in_.disable_irq();
   ResetPeriodMeas();
+  interrupt_in_.enable_irq();
 }
 
 }   // namespace encoder

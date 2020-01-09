@@ -5,6 +5,8 @@
 
 namespace l298 {
 
+static const float vdrop = 2.0;
+
 typedef enum {
   REVERSE = -1,
   UNKNOWN_DIR = 0,
@@ -20,6 +22,7 @@ class L298 {
  public:
   L298(PinName en_a, PinName en_b, PinName in1, \
        PinName in2, PinName in3, PinName in4);
+  void SetPWMPeriod(int period_ms);
   void SetDirection(Motor_Id_T motor, Direction_T new_dir);
   Direction_T GetDirection(Motor_Id_T motor);
   void SetDC(Motor_Id_T motor, uint8_t percent);
@@ -33,12 +36,8 @@ class L298 {
   DigitalOut in4_;
   PwmOut en_a_;
   PwmOut en_b_;
-
   Direction_T motor_a_dir_;
   Direction_T motor_b_dir_;
-
-  bool motor_a_stopped_;
-  bool motor_b_stopped_;
 };
 
 }  // namespace l298
