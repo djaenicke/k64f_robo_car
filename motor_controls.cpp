@@ -50,8 +50,8 @@ static l298::L298 motor_driver(MOTOR_ENA, MOTOR_ENB, MOTOR_IN1, \
                                MOTOR_IN2, MOTOR_IN3, MOTOR_IN4);
 
 /* PID controller objects */
-static pid::PID L_PID(L_Kp, L_Ki, L_Kd, CYCLE_TIME, TOLERANCE);
-static pid::PID R_PID(R_Kp, R_Ki, R_Kd, CYCLE_TIME, TOLERANCE);
+static pid::PID l_pid(L_Kp, L_Ki, L_Kd, CYCLE_TIME, TOLERANCE);
+static pid::PID r_pid(R_Kp, R_Ki, R_Kd, CYCLE_TIME, TOLERANCE);
 
 /* Wheel speed encoder objects */
 static encoder::Encoder r_encoder(R_ENCODER, PullUp, PULSES_PER_REV, 50);
@@ -64,7 +64,7 @@ static bool  ctrl_active   = false;
 static bool  awaiting_stop = false;
 static float meas_vbatt    = 0.0f;
 static float max_vbatt     = 0.0f;
-static const float min_v   = 3.0f; /* Motors require at least 3.0V */
+static const float min_v   = 0.0f;
 
 static void Run_Controller(Ctrl_Data_T * ctrl_data);
 
@@ -80,8 +80,8 @@ void InitMotorControls(void) {
   r_motor_ctrl_data.id = R_MOTOR;
   l_motor_ctrl_data.id = L_MOTOR;
 
-  r_motor_ctrl_data.pid_ptr = &R_PID;
-  l_motor_ctrl_data.pid_ptr = &L_PID;
+  r_motor_ctrl_data.pid_ptr = &r_pid;
+  l_motor_ctrl_data.pid_ptr = &l_pid;
 }
 
 void RunMotorControls(void) {
@@ -158,6 +158,8 @@ static void Run_Controller(Ctrl_Data_T * ctrl_data) {
 
   /* Determine direction */
   dir = signbit(ctrl_data->u_volts) ? l298::REVERSE : l298::FORWARD;
+
+  /* Set the motor direction */
   motor_driver.SetDirection(ctrl_data->id, dir);
 }
 
@@ -174,8 +176,8 @@ void UpdateWheelAngV(float l_sp, float r_sp, bool reset_pid) {
   ctrl_active = true;
 
   if (reset_pid) {
-    R_PID.Reset();
-    L_PID.Reset();
+    r_pid.Reset();
+    l_pid.Reset();
   }
 }
 

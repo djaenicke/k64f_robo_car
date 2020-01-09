@@ -24,7 +24,7 @@ void go_forward(void) {
   static bool enabled = false;
 
   if (!enabled) {
-    UpdateWheelAngV(15.0, 15.0, true);
+    UpdateWheelAngV(8.0, -8.0, true);
     enabled = true;
   } else {
     StopMotors();
