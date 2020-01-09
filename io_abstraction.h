@@ -16,4 +16,7 @@
 #define R_ENCODER (PTB19)
 #define L_ENCODER (PTC1)
 
+#define BLUETOOTH_RX (PTC14)
+#define BLUETOOTH_TX (PTC15)
+
 #endif  // IO_ABSTRACTION_H_
