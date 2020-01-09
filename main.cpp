@@ -7,6 +7,8 @@
 static Serial debug_out(USBTX, USBRX, 115200);
 static DigitalOut init_complete_led(LED_BLUE);
 
+static Thread motor_controls_thread(osPriorityRealtime);
+
 // main() runs in its own thread in the OS
 int main() {
   /* Initialization code */
@@ -15,9 +17,11 @@ int main() {
   InitMotorControls();
   Bluetooth_Serial_Init();
 
+  /* Start the threads */
+  motor_controls_thread.start(RunMotorControls);
+
   while (true) {
-    RunMotorControls();
-    ThisThread::sleep_for(25);
+    
   }
 }
 

@@ -95,48 +95,52 @@ void InitMotorControls(void) {
 
 void RunMotorControls(void) {
   int8_t sign;
+  
+  while (1) {
+    /* Determine the max actuation voltage based on the vbatt measurement */
+    meas_vbatt = LpFilter(ReadBatteryVoltage(), meas_vbatt, VBATT_FILT_ALPHA);
+    max_vbatt  = meas_vbatt - l298::vdrop;
 
-  /* Determine the max actuation voltage based on the vbatt measurement */
-  meas_vbatt = LpFilter(ReadBatteryVoltage(), meas_vbatt, VBATT_FILT_ALPHA);
-  max_vbatt  = meas_vbatt - l298::vdrop;
+    /* Measure the current wheel speeds via the encoders */
+    sign = l298::FORWARD == motor_driver.GetDirection(R_MOTOR) ? 1 : -1;
+    r_motor_ctrl_data.fb_rad_s = LpFilter(r_encoder.GetWheelSpeed() * sign, \
+                                            r_motor_ctrl_data.fb_rad_s, \
+                                            WHEEL_SPEED_FILT_ALPHA);
 
-  /* Measure the current wheel speeds via the encoders */
-  sign = l298::FORWARD == motor_driver.GetDirection(R_MOTOR) ? 1 : -1;
-  r_motor_ctrl_data.fb_rad_s = LpFilter(r_encoder.GetWheelSpeed() * sign, \
-                                        r_motor_ctrl_data.fb_rad_s, \
-                                        WHEEL_SPEED_FILT_ALPHA);
-
-  sign = l298::FORWARD == motor_driver.GetDirection(L_MOTOR) ? 1 : -1;
-  l_motor_ctrl_data.fb_rad_s = LpFilter(l_encoder.GetWheelSpeed() * sign, \
-                                        l_motor_ctrl_data.fb_rad_s, \
-                                        WHEEL_SPEED_FILT_ALPHA);
+    sign = l298::FORWARD == motor_driver.GetDirection(L_MOTOR) ? 1 : -1;
+    l_motor_ctrl_data.fb_rad_s = LpFilter(l_encoder.GetWheelSpeed() * sign, \
+                                            l_motor_ctrl_data.fb_rad_s, \
+                                            WHEEL_SPEED_FILT_ALPHA);
 #if TUNE
-    debug_out.printf("%d,%.2f,%.2f,%.2f,%.2f\n\r", \
-                     t.read_us(), r_motor_ctrl_data.sp_rad_s, \
-                     r_motor_ctrl_data.fb_rad_s, l_motor_ctrl_data.fb_rad_s, \
-                     meas_vbatt);
+        debug_out.printf("%d,%.2f,%.2f,%.2f,%.2f\n\r", \
+                        t.read_us(), r_motor_ctrl_data.sp_rad_s, \
+                        r_motor_ctrl_data.fb_rad_s, l_motor_ctrl_data.fb_rad_s, \
+                        meas_vbatt);
 #endif
 
-  if (ctrl_active) {
-    Run_Controller(&r_motor_ctrl_data);
-    Run_Controller(&l_motor_ctrl_data);
+    if (ctrl_active) {
+        Run_Controller(&r_motor_ctrl_data);
+        Run_Controller(&l_motor_ctrl_data);
 
-    /* Are we slowing down to stop? */
-    if (awaiting_stop && (r_motor_ctrl_data.e_rad_s < STOP_THRESHOLD) \
-        && (l_motor_ctrl_data.e_rad_s < STOP_THRESHOLD)) {
-      motor_driver.Stop(R_MOTOR);
-      motor_driver.Stop(L_MOTOR);
+        /* Are we slowing down to stop? */
+        if (awaiting_stop && (r_motor_ctrl_data.e_rad_s < STOP_THRESHOLD) \
+            && (l_motor_ctrl_data.e_rad_s < STOP_THRESHOLD)) {
+        motor_driver.Stop(R_MOTOR);
+        motor_driver.Stop(L_MOTOR);
 
-      ctrl_active = false;
-      awaiting_stop = false;
+        ctrl_active = false;
+        awaiting_stop = false;
+        }
+    } else {
+        r_motor_ctrl_data.u_percent = 0;
+        l_motor_ctrl_data.u_percent = 0;
     }
-  } else {
-    r_motor_ctrl_data.u_percent = 0;
-    l_motor_ctrl_data.u_percent = 0;
-  }
 
-  motor_driver.SetDC(R_MOTOR, r_motor_ctrl_data.u_percent);
-  motor_driver.SetDC(L_MOTOR, l_motor_ctrl_data.u_percent);
+    motor_driver.SetDC(R_MOTOR, r_motor_ctrl_data.u_percent);
+    motor_driver.SetDC(L_MOTOR, l_motor_ctrl_data.u_percent);
+
+    ThisThread::sleep_for(CYCLE_TIME*1000);
+  }
 }
 
 static void Run_Controller(Ctrl_Data_T * ctrl_data) {
