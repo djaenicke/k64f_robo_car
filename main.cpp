@@ -13,8 +13,8 @@ static Serial debug_out(USBTX, USBRX, 115200);
 static dc_motor::DC_Motor r_motor(dc_motor::RIGHT_SIDE);
 static dc_motor::DC_Motor l_motor(dc_motor::LEFT_SIDE);
 
-static encoder::Encoder r_encoder(R_ENCODER, PullUp, PULSES_PER_REV);
-static encoder::Encoder l_encoder(L_ENCODER, PullUp, PULSES_PER_REV);
+static encoder::Encoder r_encoder(R_ENCODER, PullUp, PULSES_PER_REV, 50);
+static encoder::Encoder l_encoder(L_ENCODER, PullUp, PULSES_PER_REV, 50);
 
 static Timeout print_timeout;
 static volatile bool print_speeds;
@@ -30,7 +30,6 @@ void set_print_speeds(void) {
 
 // main() runs in its own thread in the OS
 int main() {
-
   /* Initialization code */
   debug_out.printf("Battery voltage = %.2f\r\n", ReadBatteryVoltage());
   init_complete_led.write(0);

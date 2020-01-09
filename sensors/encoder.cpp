@@ -7,22 +7,20 @@ namespace encoder {
 #define START            ((uint8_t)0)
 #define END              ((uint8_t)1)
 
-Encoder::Encoder(PinName pin, PinMode mode, int pulses_per_rev) {
+Encoder::Encoder(PinName pin, PinMode mode, int pulses_per_rev, \
+                 uint8_t window_size):interrupt_in_(pin, mode) {
+  period_.meas = new int[window_size];
+  window_size_ = window_size;
   pulses_per_rev_ = pulses_per_rev;
   period_.meas_type = START;
+  last_speed_ = 0;
   t_.start();
-
-  this_interrupt_ = new InterruptIn(pin, mode);
-
-  if (this_interrupt_) // Null pointer check
-  {
-    this_interrupt_->rise(Callback<void()>(this, &Encoder::MeasurePeriod));
-    this_interrupt_->enable_irq();
-  }
+  interrupt_in_.rise(Callback<void()>(this, &Encoder::MeasurePeriod));
+  interrupt_in_.enable_irq();
 }
 
 Encoder::~Encoder(void) {
-  delete this_interrupt_;
+  delete [] period_.meas;
 }
 
 void Encoder::MeasurePeriod(void) {
@@ -31,7 +29,7 @@ void Encoder::MeasurePeriod(void) {
     period_.meas_type = END;
   } else {
     period_.meas[period_.num_meas] = t_.read_us() - period_.start;
-    period_.num_meas = period_.num_meas < (MAX_MEASUREMENTS - 1) ? \
+    period_.num_meas = period_.num_meas < (window_size_ - 1) ? \
                        period_.num_meas + 1 : 0;
     period_.meas_type = START;
   }
@@ -45,10 +43,10 @@ void Encoder::ResetPeriodMeas(void) {
 float Encoder::GetWheelSpeed(void) {
   float period_sum, period_avg, speed;
 
-  this_interrupt_->disable_irq();
+  interrupt_in_.disable_irq();
 
   /* Compute the average period since last call to ResetPeriodMeas */
-  for (uint8_t i=0; i < period_.num_meas; i++) {
+  for (uint8_t i=0; i < MIN(period_.num_meas, window_size_); i++) {
     period_sum += period_.meas[i];
   }
 
@@ -59,7 +57,7 @@ float Encoder::GetWheelSpeed(void) {
 
   ResetPeriodMeas();
 
-  this_interrupt_->enable_irq();
+  interrupt_in_.enable_irq();
 
   return(speed);
 }
