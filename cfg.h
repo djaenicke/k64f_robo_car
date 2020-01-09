@@ -3,5 +3,6 @@
 
 #define OPEN_LOOP            (0)
 #define CYCLE_TIME           (0.025f)
+#define TUNE                 (0)
 
 #endif /* CFG_H_ */

@@ -66,6 +66,11 @@ static float meas_vbatt    = 0.0f;
 static float max_vbatt     = 0.0f;
 static const float min_v   = 0.0f;
 
+#if TUNE
+static Serial debug_out(USBTX, USBRX, 115200);
+static Timer t;
+#endif
+
 static void Run_Controller(Ctrl_Data_T * ctrl_data);
 
 void InitMotorControls(void) {
@@ -82,6 +87,10 @@ void InitMotorControls(void) {
 
   r_motor_ctrl_data.pid_ptr = &r_pid;
   l_motor_ctrl_data.pid_ptr = &l_pid;
+
+#if TUNE
+  t.start();
+#endif
 }
 
 void RunMotorControls(void) {
@@ -92,7 +101,6 @@ void RunMotorControls(void) {
   max_vbatt  = meas_vbatt - l298::vdrop;
 
   /* Measure the current wheel speeds via the encoders */
-
   sign = l298::FORWARD == motor_driver.GetDirection(R_MOTOR) ? 1 : -1;
   r_motor_ctrl_data.fb_rad_s = LpFilter(r_encoder.GetWheelSpeed() * sign, \
                                         r_motor_ctrl_data.fb_rad_s, \
@@ -102,6 +110,13 @@ void RunMotorControls(void) {
   l_motor_ctrl_data.fb_rad_s = LpFilter(l_encoder.GetWheelSpeed() * sign, \
                                         l_motor_ctrl_data.fb_rad_s, \
                                         WHEEL_SPEED_FILT_ALPHA);
+#if TUNE
+    debug_out.printf("%d,%.2f,%.2f,%.2f,%.2f\n\r", \
+                     t.read_us(), r_motor_ctrl_data.sp_rad_s, \
+                     r_motor_ctrl_data.fb_rad_s, l_motor_ctrl_data.fb_rad_s, \
+                     meas_vbatt);
+#endif
+
   if (ctrl_active) {
     Run_Controller(&r_motor_ctrl_data);
     Run_Controller(&l_motor_ctrl_data);
