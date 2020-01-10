@@ -19,4 +19,7 @@
 #define BLUETOOTH_RX (PTC14)
 #define BLUETOOTH_TX (PTC15)
 
+#define MPU6050_SCL  (PTC10)
+#define MPU6050_SDA  (PTC11)
+
 #endif  // IO_ABSTRACTION_H_
