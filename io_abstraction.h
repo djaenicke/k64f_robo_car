@@ -22,4 +22,7 @@
 #define MPU6050_SCL  (PTC10)
 #define MPU6050_SDA  (PTC11)
 
+#define FXOS8700_SCL (PTE24)
+#define FXOS8700_SDA (PTE25)
+
 #endif  // IO_ABSTRACTION_H_

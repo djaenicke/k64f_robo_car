@@ -5,7 +5,7 @@ namespace mpu6050 {
 
 #include "mpu6050_regs.h"
 
-#define DEBUG_MPU6050
+//#define DEBUG_MPU6050
 
 typedef struct {
   char sub_addr;
@@ -90,50 +90,71 @@ uint8_t MPU6050::ReadByte(uint8_t sub_addr) {
   return static_cast<uint8_t>(data_out);
 }
 
-void MPU6050::ReadBytes(uint8_t sub_addr, uint8_t cnt, uint8_t * buffer) {
+int MPU6050::ReadBytes(uint8_t sub_addr, uint8_t cnt, uint8_t * buffer) {
+  int ret = 0;
+
+  /* I2C.write returns 0 on success */
   i2c_.write(mpu6050_addr, reinterpret_cast<char*>(&sub_addr), 1, true);
+
+  /* I2C.read returns 0 on success */
   i2c_.read(mpu6050_addr, reinterpret_cast<char*>(buffer), cnt);
+
+  return(ret);
 }
 
-void MPU6050::ReadGyroData(Gyro_Data_T * destination) {
+bool MPU6050::ReadGyroData(Gyro_Data_T * destination) {
   uint8_t raw_data[6];
   int16_t g[3];
+  int status = 0;
 
   MBED_ASSERT(init_complete_);
 
-  ReadBytes(GYRO_XOUT_H, 6, &raw_data[0]);
+  status = ReadBytes(GYRO_XOUT_H, 6, &raw_data[0]);
 
-  /* Turn the MSB and LSB into a signed 16-bit value */
-  g[0] = (int16_t)((raw_data[0] << 8) | raw_data[1]);
-  g[1] = (int16_t)((raw_data[2] << 8) | raw_data[3]);
-  g[2] = (int16_t)((raw_data[4] << 8) | raw_data[5]);
+  if (0 == status) {
+    /* Turn the MSB and LSB into a signed 16-bit value */
+    g[0] = (int16_t)((raw_data[0] << 8) | raw_data[1]);
+    g[1] = (int16_t)((raw_data[2] << 8) | raw_data[3]);
+    g[2] = (int16_t)((raw_data[4] << 8) | raw_data[5]);
 
-  destination->gx = (g[0] * scalings_.gyro);
-  destination->gy = (g[1] * scalings_.gyro);
-  destination->gz = (g[2] * scalings_.gyro);
+    destination->gx = (g[0] * scalings_.gyro);
+    destination->gy = (g[1] * scalings_.gyro);
+    destination->gz = (g[2] * scalings_.gyro);
+
+#ifdef DEBUG_MPU6050
+    debug_out.printf("MPU6050 - gx, gy, gz = %.2f, %.2f, %.2f\n\r", \
+                     destination->gx, destination->gy, destination->gz);
+#endif
+  }
+
+  return(0 == status ? true : false);
 }
 
-void MPU6050::ReadAccelData(Accel_Data_T * destination) {
+bool MPU6050::ReadAccelData(Accel_Data_T * destination) {
   uint8_t raw_data[6];
   int16_t a[3];
+  int status = 0;
 
   MBED_ASSERT(init_complete_);
 
-  ReadBytes(ACCEL_XOUT_H, 6, &raw_data[0]);
+  status = ReadBytes(ACCEL_XOUT_H, 6, &raw_data[0]);
 
-  /* Turn the MSB and LSB into a signed 16-bit value */
-  a[0] = (int16_t)((raw_data[0] << 8) | raw_data[1]);
-  a[1] = (int16_t)((raw_data[2] << 8) | raw_data[3]);
-  a[2] = (int16_t)((raw_data[4] << 8) | raw_data[5]);
+  if (0 == status) {
+    /* Turn the MSB and LSB into a signed 16-bit value */
+    a[0] = (int16_t)((raw_data[0] << 8) | raw_data[1]);
+    a[1] = (int16_t)((raw_data[2] << 8) | raw_data[3]);
+    a[2] = (int16_t)((raw_data[4] << 8) | raw_data[5]);
 
-  destination->ax = (a[0] * scalings_.accel);
-  destination->ay = (a[1] * scalings_.accel);
-  destination->az = (a[2] * scalings_.accel);
+    destination->ax = (a[0] * scalings_.accel);
+    destination->ay = (a[1] * scalings_.accel);
+    destination->az = (a[2] * scalings_.accel);
 
 #ifdef DEBUG_MPU6050
     debug_out.printf("MPU6050 - ax, ay, az = %.2f, %.2f, %.2f\n\r", \
                      destination->ax, destination->ay, destination->az);
 #endif
+  }
+  return(0 == status ? true : false);
 }
 
 void MPU6050::Reset(void) {

@@ -56,7 +56,7 @@ class MPU6050 {
   void Delay(uint16_t delay_ms);
   void WriteByte(uint8_t sub_addr, uint8_t data);
   uint8_t ReadByte(uint8_t sub_addr);
-  void ReadBytes(uint8_t sub_addr, uint8_t cnt, uint8_t * buffer);
+  int ReadBytes(uint8_t sub_addr, uint8_t cnt, uint8_t * buffer);
   bool TestConnection(void);
   void Calibrate(void);
   void RunSelfTest(void);
@@ -65,8 +65,8 @@ class MPU6050 {
   MPU6050(PinName sda, PinName scl, \
           Ascale_T ascale = AFS_2G, Gscale_T gscale = GFS_250DPS);
   void Init(void);
-  void ReadGyroData(Gyro_Data_T * destination);
-  void ReadAccelData(Accel_Data_T * destination);
+  bool ReadGyroData(Gyro_Data_T * destination);
+  bool ReadAccelData(Accel_Data_T * destination);
 };
 
 }  // namespace mpu6050
