@@ -1,0 +1,41 @@
+{
+    "artifact_name": "k64f_robo_car",
+    "config": {
+        "use_wifi" : {
+            "help": "Enables/disables the WIFI connection",
+            "macro_name": "USE_WIFI",
+            "required": true,
+            "value": true   
+        },
+        "wifi_ssid": {
+            "help": "The SSID of the access point connected to the ROS network",
+            "macro_name": "ROS_NETWORK_SSID",
+            "required": true,
+            "value": "\"YOUR_SSID_HERE\""
+        },
+        "wifi_password": {
+            "help": "The password for the access point connected to the ROS network",
+            "macro_name": "ROS_NETWORK_PASSWORD",
+            "required": true,
+            "value": "\"YOUR_PASSWORD_HERE\""
+        },
+        "wifi_security_type": {
+            "help": "The security type used by the access point connected to the ROS network",
+            "macro_name": "ROS_NETWORK_SECURITY_TYPE",
+            "required": true,
+            "value": "NSAPI_SECURITY_WPA2"
+        },
+        "ros_server_ip": {
+            "help": "The ros client expects the ros server to have a static IP",
+            "macro_name": "ROS_SERVER_IP",
+            "required": true,
+            "value": "\"192.168.1.4\""
+        },
+        "ros_server_port": {
+            "help": "The ros client expects the ros server to be listening on this port",
+            "macro_name": "ROS_SERVER_PORT",
+            "required": true,
+            "value": 5000
+        }
+    }
+}
