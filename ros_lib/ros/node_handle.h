@@ -37,7 +37,7 @@
 
 #include <stdint.h>
 
-#include "std_msgs/Time.h"
+#include "std_msgs/Time_ROS.h"
 #include "rosserial_msgs/TopicInfo.h"
 #include "rosserial_msgs/Log.h"
 #include "rosserial_msgs/RequestParam.h"
