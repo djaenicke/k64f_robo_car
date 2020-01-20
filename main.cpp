@@ -1,4 +1,5 @@
 #include "mbed.h"
+
 #include "io_abstraction.h"
 #include "battery_monitor.h"
 #include "motor_controls.h"
@@ -61,6 +62,7 @@ int main() {
     imu2.ReadData(&fxos_data);
 
     chatter.publish(&str_msg);
+    nh.getHardware()->get_recv_data();
     nh.spinOnce();
 
     ThisThread::sleep_for(1000);
