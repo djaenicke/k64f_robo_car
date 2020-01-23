@@ -36,6 +36,12 @@
             "macro_name": "ROS_SERVER_PORT",
             "required": true,
             "value": 5000
-        }
+        },
+        "ros_client_port": {
+          "help": "The ros server expects the ros client to be listening on this port",
+          "macro_name": "ROS_CLIENT_PORT",
+          "required": true,
+          "value": 5000
+      }
     }
 }
