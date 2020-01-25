@@ -7,9 +7,12 @@
 class MbedHardware {
  public:
   MbedHardware():
-  eth_(),
+  t_(),
+  socket_(),
   socket_addr_(ROS_SERVER_IP, ROS_SERVER_PORT),
-  pc_debug_(USBTX, USBRX, 115200){
+  eth_(),
+  pc_debug_(USBTX, USBRX, 115200),
+  circ_rx_buf_(){
     t_.start();
   }
 
@@ -27,6 +30,8 @@ class MbedHardware {
 
     socket_.bind(ROS_CLIENT_PORT);
     socket_.set_blocking(false);
+
+    memset(raw_rx_buf_, 0, max_rx_size_);
   }
 
   void get_recv_data(void) {
@@ -34,7 +39,7 @@ class MbedHardware {
     
     bytes_read = socket_.recv(raw_rx_buf_, max_rx_size_);
 
-    if (bytes_read > (max_rx_size_ - circ_rx_buf_.size())) {
+    if (bytes_read > (max_rx_size_ - (int)circ_rx_buf_.size())) {
       pc_debug_.printf("rx buffer overrun!\r\n");
     }
 
@@ -46,21 +51,29 @@ class MbedHardware {
   }
 
   int read(void) {
-    char data;
-    int ret_val;
+    char data=0;
+    int ret_val=-1;
 
-    if (!circ_rx_buf_.empty()) {
-      circ_rx_buf_.pop(data);
-      ret_val = data;
-    } else {
-      ret_val = -1;
+    if (circ_rx_buf_.pop(data)) {
+      ret_val = (int) data;
     }
 
     return ret_val;
   };
 
   void write(uint8_t * data, int length) {
-    socket_.send(data, length);
+    nsapi_size_or_error_t ret_val;
+    Timer delay_t;
+
+    delay_t.start();
+    
+    ret_val = socket_.send(data, length);
+
+    while (delay_t.read_us() < 500);
+
+    if (ret_val != length) {
+      pc_debug_.printf("socket.send() error = %d\r\n", ret_val);
+    }
   }
 
   unsigned long time(void) {
@@ -68,15 +81,15 @@ class MbedHardware {
   }
 
  protected:
+  static const int msg_header_size_ = 7;
+  static const int max_rx_size_ = 1024;
   Timer t_;
   UDPSocket socket_;
   SocketAddress socket_addr_;
   EthernetInterface eth_;
   Serial pc_debug_;
-
-  static const int max_rx_size_ = 1024;
-  char raw_rx_buf_[max_rx_size_];
   CircularBuffer<char, max_rx_size_> circ_rx_buf_;
+  char raw_rx_buf_[max_rx_size_];
 };
 
 

@@ -1,5 +1,12 @@
 {
     "artifact_name": "k64f_robo_car",
+    "target_overrides" : {
+      "K64F": {
+        "lwip.tcpip-thread-priority": "osPriorityRealtime1",
+        "lwip.raw-socket-enabled": true,
+        "rtos.main-thread-stack-size": 8192
+      }
+    },
     "config": {
         "use_wifi" : {
             "help": "Enables/disables the WIFI connection",
