@@ -3,7 +3,7 @@
 #include "mbed.h"
 #include "motor_controls.h"
 #include "io_abstraction.h"
-#include "l298.h"
+#include "tb6612.h"
 #include "pid.h"
 #include "encoder.h"
 #include "battery_monitor.h"
@@ -28,11 +28,11 @@
 #define WHEEL_SPEED_FILT_ALPHA (0.4f)
 
 /* Redefine motors ids to locations for code readability */
-#define R_MOTOR l298::MOTOR_B
-#define L_MOTOR l298::MOTOR_A
+#define R_MOTOR tb6612::MOTOR_A
+#define L_MOTOR tb6612::MOTOR_B
 
 typedef struct {
-  l298::Motor_Id_T id;
+  tb6612::Motor_Id_T id;
   pid::PID * pid_ptr;
   uint32_t cnt;
   float    ke;         /* DC motor speed constant */
@@ -46,8 +46,8 @@ typedef struct {
 } Ctrl_Data_T;
 
 /* Motor driver object */
-static l298::L298 motor_driver(MOTOR_ENA, MOTOR_ENB, MOTOR_IN1, \
-                               MOTOR_IN2, MOTOR_IN3, MOTOR_IN4);
+static tb6612::TB6612 motor_driver(MOTOR_A_PWM, MOTOR_B_PWM, MOTOR_A_IN1, \
+                                   MOTOR_A_IN2, MOTOR_B_IN1, MOTOR_B_IN2);
 
 /* PID controller objects */
 static pid::PID l_pid(L_Kp, L_Ki, L_Kd, CYCLE_TIME, TOLERANCE);
@@ -99,15 +99,15 @@ void RunMotorControls(void) {
   while (1) {
     /* Determine the max actuation voltage based on the vbatt measurement */
     meas_vbatt = LpFilter(ReadBatteryVoltage(), meas_vbatt, VBATT_FILT_ALPHA);
-    max_vbatt  = meas_vbatt - l298::vdrop;
+    max_vbatt  = meas_vbatt - tb6612::vdrop;
 
     /* Measure the current wheel speeds via the encoders */
-    sign = l298::FORWARD == motor_driver.GetDirection(R_MOTOR) ? 1 : -1;
+    sign = tb6612::FORWARD == motor_driver.GetDirection(R_MOTOR) ? 1 : -1;
     r_motor_ctrl_data.fb_rad_s = LpFilter(r_encoder.GetWheelSpeed() * sign, \
                                             r_motor_ctrl_data.fb_rad_s, \
                                             WHEEL_SPEED_FILT_ALPHA);
 
-    sign = l298::FORWARD == motor_driver.GetDirection(L_MOTOR) ? 1 : -1;
+    sign = tb6612::FORWARD == motor_driver.GetDirection(L_MOTOR) ? 1 : -1;
     l_motor_ctrl_data.fb_rad_s = LpFilter(l_encoder.GetWheelSpeed() * sign, \
                                             l_motor_ctrl_data.fb_rad_s, \
                                             WHEEL_SPEED_FILT_ALPHA);
@@ -144,7 +144,7 @@ void RunMotorControls(void) {
 }
 
 static void Run_Controller(Ctrl_Data_T * ctrl_data) {
-  l298::Direction_T dir = l298::UNKNOWN_DIR;
+  tb6612::Direction_T dir = tb6612::UNKNOWN_DIR;
 
   ctrl_data->cnt++;
 
@@ -176,7 +176,7 @@ static void Run_Controller(Ctrl_Data_T * ctrl_data) {
   ctrl_data->u_percent = (uint8_t)(fabs(ctrl_data->u_volts) * (100/max_vbatt));
 
   /* Determine direction */
-  dir = signbit(ctrl_data->u_volts) ? l298::REVERSE : l298::FORWARD;
+  dir = signbit(ctrl_data->u_volts) ? tb6612::REVERSE : tb6612::FORWARD;
 
   /* Set the motor direction */
   motor_driver.SetDirection(ctrl_data->id, dir);

@@ -19,7 +19,6 @@ void Process_Byte(void) {
     case 'r': UpdateWheelAngV( 6.0f,   -6.0f, true); break;
     case 's': StopMotors(); break;
     //case 'a': Toggle_Autonomous_Mode(); break;
-    //case 't': Toggle_Obj_Det_Enable(); break;
     }
 }
 

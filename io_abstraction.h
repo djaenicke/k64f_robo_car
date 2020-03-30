@@ -5,13 +5,13 @@
 
 #define VBATT_ADC (A0)
 
-#define MOTOR_ENA (PTA2)
-#define MOTOR_ENB (PTC2)
+#define MOTOR_A_PWM (PTA2)
+#define MOTOR_B_PWM (PTC2)
 
-#define MOTOR_IN1 (PTC3)
-#define MOTOR_IN2 (PTD1)
-#define MOTOR_IN3 (PTC4)
-#define MOTOR_IN4 (PTD2)
+#define MOTOR_A_IN1 (PTD3)
+#define MOTOR_A_IN2 (PTD1)
+#define MOTOR_B_IN1 (PTC4)
+#define MOTOR_B_IN2 (PTC12)
 
 #define R_ENCODER (PTB9)
 #define L_ENCODER (PTA1)
