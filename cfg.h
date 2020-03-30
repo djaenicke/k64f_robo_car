@@ -5,4 +5,6 @@
 #define CYCLE_TIME           (0.025f)
 #define TUNE                 (0)
 
+#define ROS_ENABLED          (1)
+
 #endif /* CFG_H_ */

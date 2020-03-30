@@ -13,17 +13,14 @@
 #define MOTOR_IN3 (PTC4)
 #define MOTOR_IN4 (PTD2)
 
-#define R_ENCODER (PTB19)
-#define L_ENCODER (PTC1)
+#define R_ENCODER (PTB9)
+#define L_ENCODER (PTA1)
 
 #define BLUETOOTH_RX (PTC14)
 #define BLUETOOTH_TX (PTC15)
 
-#define MPU6050_SCL  (PTC10)
-#define MPU6050_SDA  (PTC11)
-
-#define FXOS8700_SCL (PTE24)
-#define FXOS8700_SDA (PTE25)
+#define I2C_SCL (PTE24)
+#define I2C_SDA (PTE25)
 
 #define ESP8266_TX   (PTC17)
 #define ESP8266_RX   (PTC16)
