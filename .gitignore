@@ -5,5 +5,4 @@ projectfiles
 mbed-os
 BUILD
 mbed_app.json
-*.code-workspace
 

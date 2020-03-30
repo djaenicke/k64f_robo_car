@@ -1,4 +1,5 @@
 #include "mbed.h"
+
 #include "io_abstraction.h"
 #include "battery_monitor.h"
 #include "motor_controls.h"
@@ -8,13 +9,21 @@
 #include "fxos8700.h"
 
 #include <ros.h>
-#include <std_msgs/String_ROS.h>
+#include <nav_msgs/Odometry.h>
+#include <sensor_msgs/Imu.h>
+
+static Serial pcdebug(USBTX, USBRX, 115200);
 
 /* ROS objects/variables */
 static ros::NodeHandle nh;
-static std_msgs::String str_msg;
-static ros::Publisher chatter("chatter", &str_msg);
-char hello[13] = "hello world!";
+
+static sensor_msgs::Imu imu_msg_mpu;
+static sensor_msgs::Imu imu_msg_fxos;
+static nav_msgs::Odometry odo_msg;
+
+static ros::Publisher imu_mpu("imu_data_mpu", &imu_msg_mpu);
+static ros::Publisher imu_fxos("imu_data_fxos", &imu_msg_fxos);
+static ros::Publisher odo("odo_data", &odo_msg);
 
 static DigitalOut red_led(LED_RED);
 static DigitalOut green_led(LED_GREEN);
@@ -25,9 +34,7 @@ static Thread motor_controls_thread(osPriorityRealtime);
 static mpu6050::MPU6050 imu1(MPU6050_SDA, MPU6050_SCL);
 static fxos8700::FXOS8700 imu2(FXOS8700_SDA, FXOS8700_SCL);
 
-static mpu6050::Accel_Data_T mpu_accel_data;
-static mpu6050::Gyro_Data_T  mpu_gyro_data;
-static fxos8700::Sensor_Data_T fxos_data;
+static void PopulateImuMsgs(void);
 
 // main() runs in its own thread in the OS
 int main() {
@@ -40,12 +47,20 @@ int main() {
 
   InitMotorControls();
   Bluetooth_Serial_Init();
-  
+
   imu1.Init();
   imu2.Init();
 
   nh.initNode();
-  nh.advertise(chatter);
+
+  MBED_ASSERT(nh.advertise(imu_mpu));
+  MBED_ASSERT(nh.advertise(imu_fxos));
+  MBED_ASSERT(nh.advertise(odo));
+
+  /* Configure the different frame ids */
+  imu_msg_mpu.header.frame_id = "odom";
+  imu_msg_fxos.header.frame_id = "odom";
+  odo_msg.header.frame_id = "odom";
 
   /* Blue LED means init was successful */
   red_led.write(1);
@@ -56,14 +71,39 @@ int main() {
   motor_controls_thread.start(RunMotorControls);
 
   while (true) {
-    imu1.ReadAccelData(&mpu_accel_data);
-    imu1.ReadGyroData(&mpu_gyro_data);
-    imu2.ReadData(&fxos_data);
+    PopulateImuMsgs();
+    
+    imu_mpu.publish(&imu_msg_mpu);
+    imu_fxos.publish(&imu_msg_fxos);
+    odo.publish(&odo_msg);
 
-    chatter.publish(&str_msg);
+    nh.getHardware()->get_recv_data();
     nh.spinOnce();
 
-    ThisThread::sleep_for(1000);
+    ThisThread::sleep_for(25);
   }
 }
 
+void PopulateImuMsgs(void) {
+  mpu6050::Accel_Data_T mpu_accel_data;
+  mpu6050::Gyro_Data_T  mpu_gyro_data;
+  fxos8700::Sensor_Data_T fxos_data;
+
+  imu_msg_mpu.header.stamp = nh.now();
+  imu_msg_fxos.header.stamp = imu_msg_mpu.header.stamp;
+
+  imu1.ReadAccelData(&mpu_accel_data);
+  imu_msg_mpu.linear_acceleration.x = mpu_accel_data.ax;
+  imu_msg_mpu.linear_acceleration.y = mpu_accel_data.ay;
+  imu_msg_mpu.linear_acceleration.z = mpu_accel_data.az;
+
+  imu1.ReadGyroData(&mpu_gyro_data);
+  imu_msg_mpu.angular_velocity.x = mpu_gyro_data.gx;
+  imu_msg_mpu.angular_velocity.y = mpu_gyro_data.gy;
+  imu_msg_mpu.angular_velocity.z = mpu_gyro_data.gz;
+
+  imu2.ReadData(&fxos_data);
+  imu_msg_fxos.linear_acceleration.x = fxos_data.ax;
+  imu_msg_fxos.linear_acceleration.y = fxos_data.ay;
+  imu_msg_fxos.linear_acceleration.z = fxos_data.az;
+}
