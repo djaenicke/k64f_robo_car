@@ -10,15 +10,15 @@
 #include "lp_filter.h"
 #include "cfg.h"
 
-#define R_Ke 0.226f
-#define L_Ke 0.192f
+#define R_Ke 0.255f
+#define L_Ke 0.215f
 
-#define L_Kp 10.0f
-#define L_Ki 40.0f
-#define L_Kd 0.52f
+#define L_Kp 4.5f
+#define L_Ki 10.0f
+#define L_Kd 0.3f
 
-#define R_Kp 5.5f
-#define R_Ki 15.0f
+#define R_Kp 4.5f
+#define R_Ki 12.0f
 #define R_Kd 0.3f
 
 #define TOLERANCE              (0.0f) /* rad/s */
@@ -26,6 +26,7 @@
 #define VBATT_FILT_ALPHA       (0.4f)
 #define PULSES_PER_REV         (192)
 #define WHEEL_SPEED_FILT_ALPHA (0.4f)
+#define MAX_MOTOR_VOLTAGE      (6.0f)
 
 /* Redefine motors ids to locations for code readability */
 #define R_MOTOR tb6612::MOTOR_A
@@ -77,7 +78,7 @@ void InitMotorControls(void) {
   memset(&r_motor_ctrl_data, 0, sizeof(r_motor_ctrl_data));
   memset(&l_motor_ctrl_data, 0, sizeof(l_motor_ctrl_data));
 
-  motor_driver.SetPWMPeriod(1);
+  motor_driver.SetPWMPeriod(0.0001);
 
   r_motor_ctrl_data.ke = R_Ke;
   l_motor_ctrl_data.ke = L_Ke;
@@ -99,8 +100,13 @@ void RunMotorControls(void) {
   while (1) {
     /* Determine the max actuation voltage based on the vbatt measurement */
     meas_vbatt = LpFilter(ReadBatteryVoltage(), meas_vbatt, VBATT_FILT_ALPHA);
-    max_vbatt  = meas_vbatt - tb6612::vdrop;
 
+    if (meas_vbatt < MAX_MOTOR_VOLTAGE) {
+      max_vbatt = meas_vbatt - tb6612::vdrop;
+    } else {
+      max_vbatt = MAX_MOTOR_VOLTAGE - tb6612::vdrop;
+    }
+    
     /* Measure the current wheel speeds via the encoders */
     sign = tb6612::FORWARD == motor_driver.GetDirection(R_MOTOR) ? 1 : -1;
     r_motor_ctrl_data.fb_rad_s = LpFilter(r_encoder.GetWheelSpeed() * sign, \
@@ -111,14 +117,14 @@ void RunMotorControls(void) {
     l_motor_ctrl_data.fb_rad_s = LpFilter(l_encoder.GetWheelSpeed() * sign, \
                                             l_motor_ctrl_data.fb_rad_s, \
                                             WHEEL_SPEED_FILT_ALPHA);
-#if TUNE
-        debug_out.printf("%d,%.2f,%.2f,%.2f,%.2f\n\r", \
-                        t.read_us(), r_motor_ctrl_data.sp_rad_s, \
-                        r_motor_ctrl_data.fb_rad_s, l_motor_ctrl_data.fb_rad_s, \
-                        meas_vbatt);
-#endif
 
     if (ctrl_active) {
+#if TUNE
+        debug_out.printf("%d,%.2f,%.2f,%.2f,%.2f,%d,%d\n\r", \
+                        t.read_us(), r_motor_ctrl_data.sp_rad_s, \
+                        r_motor_ctrl_data.fb_rad_s, l_motor_ctrl_data.fb_rad_s, \
+                        meas_vbatt, r_motor_ctrl_data.u_percent, l_motor_ctrl_data.u_percent);
+#endif
         Run_Controller(&r_motor_ctrl_data);
         Run_Controller(&l_motor_ctrl_data);
 
@@ -166,14 +172,14 @@ static void Run_Controller(Ctrl_Data_T * ctrl_data) {
   /* Saturate the set points to be within the actuator voltage range */
   int8_t sign;
   sign = signbit(ctrl_data->sp_volts) ? -1 : 1;
-  ctrl_data->u_volts  = fabs(ctrl_data->sp_volts) > min_v ? \
+  ctrl_data->u_volts = fabs(ctrl_data->sp_volts) > min_v ? \
                         ctrl_data->sp_volts : sign * min_v;
-  ctrl_data->u_volts  = fabs(ctrl_data->sp_volts) < max_vbatt ? \
+  ctrl_data->u_volts = fabs(ctrl_data->sp_volts) < max_vbatt ? \
                         ctrl_data->sp_volts : sign * max_vbatt;
 #endif  // OPEN_LOOP
 
   /* Convert the actuation voltage to a percent duty cycle */
-  ctrl_data->u_percent = (uint8_t)(fabs(ctrl_data->u_volts) * (100/max_vbatt));
+  ctrl_data->u_percent = (uint8_t)(fabs(ctrl_data->u_volts) * (100/meas_vbatt));
 
   /* Determine direction */
   dir = signbit(ctrl_data->u_volts) ? tb6612::REVERSE : tb6612::FORWARD;

@@ -3,8 +3,8 @@
 
 #define OPEN_LOOP            (0)
 #define CYCLE_TIME           (0.025f)
-#define TUNE                 (0)
+#define TUNE                 (1)
 
-#define ROS_ENABLED          (1)
+#define ROS_ENABLED          (0)
 
 #endif /* CFG_H_ */

@@ -22,7 +22,7 @@ class TB6612 {
  public:
   TB6612(PinName pwm_a, PinName pwm_b, PinName a_in1, \
          PinName a_in2, PinName b_in1, PinName b_in2);
-  void SetPWMPeriod(int period_ms);
+  void SetPWMPeriod(float period_s);
   void SetDirection(Motor_Id_T motor, Direction_T new_dir);
   Direction_T GetDirection(Motor_Id_T motor);
   void SetDC(Motor_Id_T motor, uint8_t percent);

@@ -8,9 +8,9 @@ TB6612::TB6612(PinName pwm_a, PinName pwm_b, PinName a_in1, \
            a_in2_(a_in2), b_in1_(b_in1), b_in2_(b_in2) {
 }
 
-void TB6612::SetPWMPeriod(int period_ms) {
-    pwm_a_.period_ms(period_ms);
-    pwm_b_.period_ms(period_ms);
+void TB6612::SetPWMPeriod(float period_s) {
+    pwm_a_.period(period_s);
+    pwm_b_.period(period_s);
 }
 
 void TB6612::SetDirection(Motor_Id_T motor, Direction_T new_dir) {
