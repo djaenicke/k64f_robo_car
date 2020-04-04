@@ -95,8 +95,8 @@ void PopulateImuMsgs(void) {
   imu_msg_fxos.header.stamp = imu_msg_mpu.header.stamp;
 
   imu1.ReadAccelData(&mpu_accel_data);
-  imu_msg_mpu.linear_acceleration.x = mpu_accel_data.ax;
-  imu_msg_mpu.linear_acceleration.y = mpu_accel_data.ay;
+  imu_msg_mpu.linear_acceleration.x = -1.0f * mpu_accel_data.ax;
+  imu_msg_mpu.linear_acceleration.y = -1.0f * mpu_accel_data.ay;
   imu_msg_mpu.linear_acceleration.z = mpu_accel_data.az;
 
   imu1.ReadGyroData(&mpu_gyro_data);
@@ -105,7 +105,7 @@ void PopulateImuMsgs(void) {
   imu_msg_mpu.angular_velocity.z = mpu_gyro_data.gz;
 
   imu2.ReadData(&fxos_data);
-  imu_msg_fxos.linear_acceleration.x = fxos_data.ax;
-  imu_msg_fxos.linear_acceleration.y = fxos_data.ay;
+  imu_msg_fxos.linear_acceleration.x = fxos_data.ay;
+  imu_msg_fxos.linear_acceleration.y = fxos_data.ax;
   imu_msg_fxos.linear_acceleration.z = fxos_data.az;
 }
