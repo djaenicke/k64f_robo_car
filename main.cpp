@@ -31,8 +31,8 @@ static DigitalOut blue_led(LED_BLUE);
 
 static Thread motor_controls_thread(osPriorityRealtime);
 
-static mpu6050::MPU6050 imu1(MPU6050_SDA, MPU6050_SCL);
-static fxos8700::FXOS8700 imu2(FXOS8700_SDA, FXOS8700_SCL);
+static mpu6050::MPU6050 imu1(I2C_SDA, I2C_SCL);
+static fxos8700::FXOS8700 imu2(I2C_SDA, I2C_SCL);
 
 static void PopulateImuMsgs(void);
 
@@ -51,11 +51,13 @@ int main() {
   imu1.Init();
   imu2.Init();
 
+#if ROS_ENABLED
   nh.initNode();
 
   MBED_ASSERT(nh.advertise(imu_mpu));
   MBED_ASSERT(nh.advertise(imu_fxos));
   MBED_ASSERT(nh.advertise(odo));
+#endif
 
   /* Configure the different frame ids */
   imu_msg_mpu.header.frame_id = "odom";
@@ -72,14 +74,14 @@ int main() {
 
   while (true) {
     PopulateImuMsgs();
-    
+#if ROS_ENABLED
     imu_mpu.publish(&imu_msg_mpu);
     imu_fxos.publish(&imu_msg_fxos);
     odo.publish(&odo_msg);
 
     nh.getHardware()->get_recv_data();
     nh.spinOnce();
-
+#endif
     ThisThread::sleep_for(25);
   }
 }
