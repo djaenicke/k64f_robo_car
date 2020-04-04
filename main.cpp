@@ -1,5 +1,6 @@
 #include "mbed.h"
 
+#include "cfg.h"
 #include "io_abstraction.h"
 #include "battery_monitor.h"
 #include "motor_controls.h"
@@ -105,7 +106,7 @@ void PopulateImuMsgs(void) {
   imu_msg_mpu.angular_velocity.z = mpu_gyro_data.gz;
 
   imu2.ReadData(&fxos_data);
-  imu_msg_fxos.linear_acceleration.x = fxos_data.ay;
+  imu_msg_fxos.linear_acceleration.x = -1.0f * fxos_data.ay;
   imu_msg_fxos.linear_acceleration.y = fxos_data.ax;
   imu_msg_fxos.linear_acceleration.z = fxos_data.az;
 }
