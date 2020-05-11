@@ -1,6 +1,6 @@
 #include "mbed.h"
 
-#include "cfg.h"
+#include "config.h"
 #include "io_abstraction.h"
 #include "battery_monitor.h"
 #include "motor_controls.h"

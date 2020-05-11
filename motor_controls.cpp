@@ -8,7 +8,7 @@
 #include "encoder.h"
 #include "battery_monitor.h"
 #include "lp_filter.h"
-#include "cfg.h"
+#include "config.h"
 
 #define R_Ke 0.255f
 #define L_Ke 0.215f

@@ -19,6 +19,9 @@
 #define BLUETOOTH_RX (PTC14)
 #define BLUETOOTH_TX (PTC15)
 
+#define XBEE_RX (PTC14)
+#define XBEE_TX (PTC15)
+
 #define I2C_SCL (PTE24)
 #define I2C_SDA (PTE25)
 
