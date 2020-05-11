@@ -35,6 +35,9 @@ static Thread motor_controls_thread(osPriorityRealtime);
 static mpu6050::MPU6050 imu1(I2C_SDA, I2C_SCL);
 static fxos8700::FXOS8700 imu2(I2C_SDA, I2C_SCL);
 
+static char log_buffer[200];
+static uint32_t cnt = 0;
+
 static void PopulateImuMsgs(void);
 
 // main() runs in its own thread in the OS
@@ -47,7 +50,7 @@ int main() {
   blue_led.write(1);
 
   InitMotorControls();
-  Bluetooth_Serial_Init();
+  InitSerialCtrl();
 
   imu1.Init();
   imu2.Init();
@@ -83,6 +86,17 @@ int main() {
     nh.getHardware()->get_recv_data();
     nh.spinOnce();
 #endif
+    sprintf(log_buffer, "%d,%.2f,%.2f,%.2f,%.2f,%.2f", cnt, \
+                                                     imu_msg_mpu.angular_velocity.z,     \
+                                                     imu_msg_mpu.linear_acceleration.x,  \
+                                                     imu_msg_fxos.linear_acceleration.x, \
+                                                     imu_msg_mpu.linear_acceleration.y,  \
+                                                     imu_msg_fxos.linear_acceleration.y  \
+
+    );
+    XbeeProcessRxData();
+    XbeeTxData(log_buffer, strlen(log_buffer));
+    cnt++;
     ThisThread::sleep_for(25);
   }
 }

@@ -32,8 +32,10 @@
 #define RADIO_RESET             NC
 #define RADIO_SLEEP_REQ         NC
 #define RADIO_ON_SLEEP          NC
-#define DEBUG_TX                NC
-#define DEBUG_RX                NC
+#define DEBUG_TX                USBTX
+#define DEBUG_RX                USBRX
+
+#define REMOTE_NODE_ADDR16      ((uint16_t)0xA5A5)
  
 #if !defined(RADIO_TX)
     #error "Please define RADIO_TX pin"
