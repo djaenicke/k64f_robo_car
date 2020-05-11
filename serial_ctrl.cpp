@@ -10,7 +10,7 @@ static Serial pcdebug(USBTX, USBRX, 115200);
 #if USE_BLUETOOTH
 static RawSerial bluetooth(BLUETOOTH_TX, BLUETOOTH_RX, 9600);
 #elif USE_XBEE
-XBeeLib::XBee802 xbee = XBeeLib::XBee802(RADIO_TX, RADIO_RX, RADIO_RESET, NC, NC, 9600);
+XBeeLib::XBee802 xbee = XBeeLib::XBee802(RADIO_TX, RADIO_RX, RADIO_RESET, NC, NC, 38400);
 const XBeeLib::RemoteXBee802 remote_device = XBeeLib::RemoteXBee802(REMOTE_NODE_ADDR16);
 #endif
 

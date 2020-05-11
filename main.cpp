@@ -15,6 +15,9 @@
 
 static Serial pcdebug(USBTX, USBRX, 115200);
 
+static Timer t;
+static int t_start;
+
 /* ROS objects/variables */
 static ros::NodeHandle nh;
 
@@ -36,7 +39,7 @@ static mpu6050::MPU6050 imu1(I2C_SDA, I2C_SCL);
 static fxos8700::FXOS8700 imu2(I2C_SDA, I2C_SCL);
 
 static char log_buffer[200];
-static uint32_t cnt = 0;
+static int last_t = 0, current_t = 0, dt = 0;
 
 static void PopulateImuMsgs(void);
 
@@ -76,7 +79,11 @@ int main() {
   /* Start the threads */
   motor_controls_thread.start(RunMotorControls);
 
+  t.start();
+
   while (true) {
+    t_start = t.read_ms();
+
     PopulateImuMsgs();
 #if ROS_ENABLED
     imu_mpu.publish(&imu_msg_mpu);
@@ -86,7 +93,11 @@ int main() {
     nh.getHardware()->get_recv_data();
     nh.spinOnce();
 #endif
-    sprintf(log_buffer, "%d,%.2f,%.2f,%.2f,%.2f,%.2f", cnt, \
+    current_t = t.read_us();
+    dt = current_t-last_t;
+    last_t = current_t;
+
+    sprintf(log_buffer, "%d,%.2f,%.2f,%.2f,%.2f,%.2f", dt, \
                                                      imu_msg_mpu.angular_velocity.z,     \
                                                      imu_msg_mpu.linear_acceleration.x,  \
                                                      imu_msg_fxos.linear_acceleration.x, \
@@ -94,10 +105,11 @@ int main() {
                                                      imu_msg_fxos.linear_acceleration.y  \
 
     );
+#if USE_XBEE
     XbeeProcessRxData();
     XbeeTxData(log_buffer, strlen(log_buffer));
-    cnt++;
-    ThisThread::sleep_for(25);
+#endif
+    ThisThread::sleep_for(50-(t.read_ms()-t_start));
   }
 }
 
