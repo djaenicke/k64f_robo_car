@@ -10,8 +10,6 @@
 #include "fxos8700.h"
 
 #include <ros.h>
-#include <nav_msgs/Odometry.h>
-#include <sensor_msgs/Imu.h>
 
 static Serial pcdebug(USBTX, USBRX, 115200);
 
@@ -20,14 +18,6 @@ static int t_start;
 
 /* ROS objects/variables */
 static ros::NodeHandle nh;
-
-static sensor_msgs::Imu imu_msg_mpu;
-static sensor_msgs::Imu imu_msg_fxos;
-static nav_msgs::Odometry odo_msg;
-
-static ros::Publisher imu_mpu("imu_data_mpu", &imu_msg_mpu);
-static ros::Publisher imu_fxos("imu_data_fxos", &imu_msg_fxos);
-static ros::Publisher odo("odo_data", &odo_msg);
 
 static DigitalOut red_led(LED_RED);
 static DigitalOut green_led(LED_GREEN);
@@ -64,16 +54,7 @@ int main() {
 
 #if ROS_ENABLED
   nh.initNode();
-
-  MBED_ASSERT(nh.advertise(imu_mpu));
-  MBED_ASSERT(nh.advertise(imu_fxos));
-  MBED_ASSERT(nh.advertise(odo));
 #endif
-
-  /* Configure the different frame ids */
-  imu_msg_mpu.header.frame_id = "odom";
-  imu_msg_fxos.header.frame_id = "odom";
-  odo_msg.header.frame_id = "odom";
 
   /* Blue LED means init was successful */
   red_led.write(1);
@@ -88,12 +69,7 @@ int main() {
   while (true) {
     t_start = t.read_ms();
 
-    PopulateImuMsgs();
 #if ROS_ENABLED
-    imu_mpu.publish(&imu_msg_mpu);
-    imu_fxos.publish(&imu_msg_fxos);
-    odo.publish(&odo_msg);
-
     nh.getHardware()->get_recv_data();
     nh.spinOnce();
 #endif
@@ -105,34 +81,13 @@ int main() {
   }
 }
 
-void PopulateImuMsgs(void) {
-  mpu6050::Accel_Data_T mpu_accel_data;
-  mpu6050::Gyro_Data_T  mpu_gyro_data;
-  fxos8700::Sensor_Data_T fxos_data;
-
-  imu_msg_mpu.header.stamp = nh.now();
-  imu_msg_fxos.header.stamp = imu_msg_mpu.header.stamp;
-
-  imu1.ReadAccelData(&mpu_accel_data);
-  imu_msg_mpu.linear_acceleration.x = -1.0f * mpu_accel_data.ax;
-  imu_msg_mpu.linear_acceleration.y = -1.0f * mpu_accel_data.ay;
-  imu_msg_mpu.linear_acceleration.z = mpu_accel_data.az;
-
-  imu1.ReadGyroData(&mpu_gyro_data);
-  imu_msg_mpu.angular_velocity.x = mpu_gyro_data.gx;
-  imu_msg_mpu.angular_velocity.y = mpu_gyro_data.gy;
-  imu_msg_mpu.angular_velocity.z = mpu_gyro_data.gz;
-
-  imu2.ReadData(&fxos_data);
-  imu_msg_fxos.linear_acceleration.x = -1.0f * fxos_data.ay;
-  imu_msg_fxos.linear_acceleration.y = fxos_data.ax;
-  imu_msg_fxos.linear_acceleration.z = fxos_data.az;
-}
-
 void LogInertialData(void) {
   static int last_t = 0;
   int current_t = 0, dt = 0;
   Wheel_Ang_V_T sp, fb;
+  mpu6050::Accel_Data_T mpu_accel_data;
+  mpu6050::Gyro_Data_T  mpu_gyro_data;
+  fxos8700::Sensor_Data_T fxos_data;
 
   current_t = t.read_us();
   dt = current_t-last_t;
@@ -140,13 +95,24 @@ void LogInertialData(void) {
 
   memset(log_buffer, 0, sizeof(log_buffer));
 
+  imu1.ReadAccelData(&mpu_accel_data);
+  imu1.ReadGyroData(&mpu_gyro_data);
+  imu2.ReadData(&fxos_data);
+
+  /* Coordinate xformations
+  ax = -1.0f * mpu_accel_data.ax;
+  ay = -1.0f * mpu_accel_data.ay;
+
+  ax = -1.0f * fxos_data.ay;
+  ay = fxos_data.ax; */
+
   GetWheelAngVSp(&sp);
   GetWheelAngV(&fb);
 
   sprintf(log_buffer, "%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f", 
-          dt, sp.l, sp.r, fb.l, fb.r, imu_msg_mpu.angular_velocity.z,
-          imu_msg_mpu.linear_acceleration.x, imu_msg_fxos.linear_acceleration.x, \
-          imu_msg_mpu.linear_acceleration.y, imu_msg_fxos.linear_acceleration.y  \
+          dt, sp.l, sp.r, fb.l, fb.r, mpu_gyro_data.gz,
+          mpu_accel_data.ax, fxos_data.ax, \
+          mpu_accel_data.ay, fxos_data.ay  \
   );
 
   XbeeTxData(log_buffer, strlen(log_buffer));
