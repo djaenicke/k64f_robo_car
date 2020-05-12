@@ -39,9 +39,9 @@ static mpu6050::MPU6050 imu1(I2C_SDA, I2C_SCL);
 static fxos8700::FXOS8700 imu2(I2C_SDA, I2C_SCL);
 
 static char log_buffer[200];
-static int last_t = 0, current_t = 0, dt = 0;
 
 static void PopulateImuMsgs(void);
+static void LogInertialData(void);
 
 // main() runs in its own thread in the OS
 int main() {
@@ -54,6 +54,10 @@ int main() {
 
   InitMotorControls();
   InitSerialCtrl();
+
+  /* Wait 2 seconds before calibrating the IMUs so 
+     the user doesn't affect the calibration process by touching the robot*/
+  ThisThread::sleep_for(2000);
 
   imu1.Init();
   imu2.Init();
@@ -93,21 +97,9 @@ int main() {
     nh.getHardware()->get_recv_data();
     nh.spinOnce();
 #endif
-    current_t = t.read_us();
-    dt = current_t-last_t;
-    last_t = current_t;
-
-    sprintf(log_buffer, "%d,%.2f,%.2f,%.2f,%.2f,%.2f", dt, \
-                                                     imu_msg_mpu.angular_velocity.z,     \
-                                                     imu_msg_mpu.linear_acceleration.x,  \
-                                                     imu_msg_fxos.linear_acceleration.x, \
-                                                     imu_msg_mpu.linear_acceleration.y,  \
-                                                     imu_msg_fxos.linear_acceleration.y  \
-
-    );
 #if USE_XBEE
     XbeeProcessRxData();
-    XbeeTxData(log_buffer, strlen(log_buffer));
+    LogInertialData();
 #endif
     ThisThread::sleep_for(50-(t.read_ms()-t_start));
   }
@@ -135,4 +127,27 @@ void PopulateImuMsgs(void) {
   imu_msg_fxos.linear_acceleration.x = -1.0f * fxos_data.ay;
   imu_msg_fxos.linear_acceleration.y = fxos_data.ax;
   imu_msg_fxos.linear_acceleration.z = fxos_data.az;
+}
+
+void LogInertialData(void) {
+  static int last_t = 0;
+  int current_t = 0, dt = 0;
+  Wheel_Ang_V_T sp, fb;
+
+  current_t = t.read_us();
+  dt = current_t-last_t;
+  last_t = current_t;
+
+  memset(log_buffer, 0, sizeof(log_buffer));
+
+  GetWheelAngVSp(&sp);
+  GetWheelAngV(&fb);
+
+  sprintf(log_buffer, "%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f", 
+          dt, sp.l, sp.r, fb.l, fb.r, imu_msg_mpu.angular_velocity.z,
+          imu_msg_mpu.linear_acceleration.x, imu_msg_fxos.linear_acceleration.x, \
+          imu_msg_mpu.linear_acceleration.y, imu_msg_fxos.linear_acceleration.y  \
+  );
+
+  XbeeTxData(log_buffer, strlen(log_buffer));
 }

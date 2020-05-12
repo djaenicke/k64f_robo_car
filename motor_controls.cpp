@@ -188,6 +188,13 @@ static void Run_Controller(Ctrl_Data_T * ctrl_data) {
   motor_driver.SetDirection(ctrl_data->id, dir);
 }
 
+void GetWheelAngVSp(Wheel_Ang_V_T *dest) {
+    if (dest) {
+    dest->r = r_motor_ctrl_data.sp_rad_s;
+    dest->l = l_motor_ctrl_data.sp_rad_s;
+  }
+}
+
 void GetWheelAngV(Wheel_Ang_V_T *dest) {
   if (dest) {
     dest->r = r_motor_ctrl_data.fb_rad_s;
