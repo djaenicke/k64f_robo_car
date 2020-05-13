@@ -5,6 +5,7 @@
 #include "battery_monitor.h"
 #include "motor_controls.h"
 #include "serial_ctrl.h"
+#include "inertial_data_msg.h"
 
 #include "mpu6050.h"
 #include "fxos8700.h"
@@ -28,7 +29,7 @@ static Thread motor_controls_thread(osPriorityRealtime);
 static mpu6050::MPU6050 imu1(I2C_SDA, I2C_SCL);
 static fxos8700::FXOS8700 imu2(I2C_SDA, I2C_SCL);
 
-static char log_buffer[200];
+static Inertial_Data_Msg_T Inertial_Data_Msg;
 
 static void PopulateImuMsgs(void);
 static void LogInertialData(void);
@@ -82,38 +83,33 @@ int main() {
 }
 
 void LogInertialData(void) {
-  static int last_t = 0;
-  int current_t = 0, dt = 0;
-  Wheel_Ang_V_T sp, fb;
+  Wheel_Ang_V_T speeds;
   mpu6050::Accel_Data_T mpu_accel_data;
   mpu6050::Gyro_Data_T  mpu_gyro_data;
   fxos8700::Sensor_Data_T fxos_data;
 
-  current_t = t.read_us();
-  dt = current_t-last_t;
-  last_t = current_t;
+  Inertial_Data_Msg.ts = t.read_us();
 
-  memset(log_buffer, 0, sizeof(log_buffer));
+  GetWheelAngVSp(&speeds); /* Setpoint */
+  Inertial_Data_Msg.l_speed_sp = ENCODE_SIGNAL(speeds.l);
+  Inertial_Data_Msg.r_speed_sp = ENCODE_SIGNAL(speeds.r);
+
+  GetWheelAngV(&speeds); /* Feedback */
+  Inertial_Data_Msg.l_speed_fb = ENCODE_SIGNAL(speeds.l);
+  Inertial_Data_Msg.r_speed_fb = ENCODE_SIGNAL(speeds.r);
+
+  imu2.ReadData(&fxos_data);
+  Inertial_Data_Msg.fxos_ax = ENCODE_SIGNAL(-1.0f * fxos_data.ay);
+  Inertial_Data_Msg.fxos_ay = ENCODE_SIGNAL(fxos_data.ax);
+  Inertial_Data_Msg.fxos_az = ENCODE_SIGNAL(fxos_data.az);
 
   imu1.ReadAccelData(&mpu_accel_data);
+  Inertial_Data_Msg.mpu_ax = ENCODE_SIGNAL(-1.0f * mpu_accel_data.ax);
+  Inertial_Data_Msg.mpu_ay = ENCODE_SIGNAL(-1.0f * mpu_accel_data.ay);
+  Inertial_Data_Msg.mpu_az = ENCODE_SIGNAL(mpu_accel_data.az);
+
   imu1.ReadGyroData(&mpu_gyro_data);
-  imu2.ReadData(&fxos_data);
+  Inertial_Data_Msg.mpu_gz = ENCODE_SIGNAL(mpu_gyro_data.gz);
 
-  /* Coordinate xformations
-  ax = -1.0f * mpu_accel_data.ax;
-  ay = -1.0f * mpu_accel_data.ay;
-
-  ax = -1.0f * fxos_data.ay;
-  ay = fxos_data.ax; */
-
-  GetWheelAngVSp(&sp);
-  GetWheelAngV(&fb);
-
-  sprintf(log_buffer, "%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f", 
-          dt, sp.l, sp.r, fb.l, fb.r, mpu_gyro_data.gz,
-          mpu_accel_data.ax, fxos_data.ax, \
-          mpu_accel_data.ay, fxos_data.ay  \
-  );
-
-  XbeeTxData(log_buffer, strlen(log_buffer));
+  XbeeTxData((char*)(&Inertial_Data_Msg), sizeof(Inertial_Data_Msg));
 }
