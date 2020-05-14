@@ -9,6 +9,7 @@
 #include "fxos8700.h"
 
 #include <ros.h>
+#include <std_msgs/String_ROS.h>
 
 static Serial pcdebug(USBTX, USBRX, 115200);
 
@@ -17,6 +18,11 @@ static int t_start;
 
 /* ROS objects/variables */
 static ros::NodeHandle nh;
+
+std_msgs::String str_msg;
+ros::Publisher chatter("chatter", &str_msg);
+
+char hello[13] = "hello world!";
 
 static DigitalOut red_led(LED_RED);
 static DigitalOut green_led(LED_GREEN);
@@ -53,6 +59,8 @@ int main() {
 
 #if ROS_ENABLED
   nh.initNode();
+  nh.advertise(chatter);
+  str_msg.data = hello;
 #endif
 
   /* Blue LED means init was successful */
@@ -82,6 +90,7 @@ int main() {
     imu1.ReadGyroData(&mpu_gyro_data);
 
 #if ROS_ENABLED
+    chatter.publish(&str_msg);
     nh.spinOnce();
 #endif
     ThisThread::sleep_for(50-(t.read_ms()-t_start));
