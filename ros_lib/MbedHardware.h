@@ -3,6 +3,7 @@
  *
  *  Created on: Aug 17, 2011
  *      Author: nucho
+ *      Modified by: djaenicke
  */
 
 #ifndef ROS_MBED_HARDWARE_H_
@@ -15,7 +16,7 @@
 
 class MbedHardware {
  public:
-  MbedHardware():iostream_(XBEE_TX, XBEE_RX) {
+  MbedHardware():iostream_(ROS_TX, ROS_RX) {
     baud_ = 57600;
     t_.start();
   }
