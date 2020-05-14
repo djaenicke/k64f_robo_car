@@ -82,7 +82,6 @@ int main() {
     imu1.ReadGyroData(&mpu_gyro_data);
 
 #if ROS_ENABLED
-    nh.getHardware()->get_recv_data();
     nh.spinOnce();
 #endif
     ThisThread::sleep_for(50-(t.read_ms()-t_start));

@@ -16,9 +16,6 @@
 #define R_ENCODER (PTB9)
 #define L_ENCODER (PTA1)
 
-#define BLUETOOTH_RX (PTC14)
-#define BLUETOOTH_TX (PTC15)
-
 #define XBEE_RX (PTC14)
 #define XBEE_TX (PTC15)
 
