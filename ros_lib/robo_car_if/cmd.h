@@ -12,12 +12,15 @@ namespace robo_car_if
   class cmd : public ros::Msg
   {
     public:
+      typedef uint8_t _stop_type;
+      _stop_type stop;
       typedef float _r_wheel_sp_type;
       _r_wheel_sp_type r_wheel_sp;
       typedef float _l_wheel_sp_type;
       _l_wheel_sp_type l_wheel_sp;
 
     cmd():
+      stop(0),
       r_wheel_sp(0),
       l_wheel_sp(0)
     {
@@ -26,6 +29,8 @@ namespace robo_car_if
     virtual int serialize(unsigned char *outbuffer) const
     {
       int offset = 0;
+      *(outbuffer + offset + 0) = (this->stop >> (8 * 0)) & 0xFF;
+      offset += sizeof(this->stop);
       union {
         float real;
         uint32_t base;
@@ -52,6 +57,8 @@ namespace robo_car_if
     virtual int deserialize(unsigned char *inbuffer)
     {
       int offset = 0;
+      this->stop =  ((uint8_t) (*(inbuffer + offset)));
+      offset += sizeof(this->stop);
       union {
         float real;
         uint32_t base;
@@ -78,7 +85,7 @@ namespace robo_car_if
     }
 
     const char * getType(){ return "robo_car_if/cmd"; };
-    const char * getMD5(){ return "52db947404aeb3935b556d4c595ea2b8"; };
+    const char * getMD5(){ return "dcaa3008d79ae4596d78607cd51d54a5"; };
 
   };
 
