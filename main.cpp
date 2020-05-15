@@ -121,5 +121,8 @@ void Populate_State_Msg(void) {
 void Cmd_Msg_Callback(const robo_car_if::cmd& msg) {
   // TODO: add range checks
   UpdateWheelAngV(msg.r_wheel_sp, msg.l_wheel_sp, true);
-  pcdebug.printf("robo_car_cmd msg received!");
+
+  if (0 != msg.stop) {
+    StopMotors();
+  }
 }
