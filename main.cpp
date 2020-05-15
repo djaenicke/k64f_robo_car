@@ -9,7 +9,8 @@
 #include "fxos8700.h"
 
 #include <ros.h>
-#include <std_msgs/String_ROS.h>
+#include <robo_car_if/state.h>
+#include <robo_car_if/cmd.h>
 
 static Serial pcdebug(USBTX, USBRX, 115200);
 
@@ -18,11 +19,14 @@ static int t_start;
 
 /* ROS objects/variables */
 static ros::NodeHandle nh;
+static robo_car_if::state state_msg;
+static robo_car_if::cmd cmd_msg;
 
-std_msgs::String str_msg;
-ros::Publisher chatter("chatter", &str_msg);
+void Cmd_Msg_Callback(const robo_car_if::cmd& msg);
 
-char hello[13] = "hello world!";
+static ros::Publisher state_msg_pub("robo_car_state", &state_msg);
+static ros::Subscriber<robo_car_if::cmd> state_cmd_sub("robo_car_cmd", &Cmd_Msg_Callback);
+/* End - ROS objects/variables */
 
 static DigitalOut red_led(LED_RED);
 static DigitalOut green_led(LED_GREEN);
@@ -38,6 +42,8 @@ Wheel_Ang_V_T wheel_speed_fb;
 mpu6050::Accel_Data_T mpu_accel_data;
 mpu6050::Gyro_Data_T  mpu_gyro_data;
 fxos8700::Sensor_Data_T fxos_data;
+
+static void Populate_State_Msg(void);
 
 // main() runs in its own thread in the OS
 int main() {
@@ -59,8 +65,8 @@ int main() {
 
 #if ROS_ENABLED
   nh.initNode();
-  nh.advertise(chatter);
-  str_msg.data = hello;
+  nh.advertise(state_msg_pub);
+  nh.subscribe(state_cmd_sub);
 #endif
 
   /* Blue LED means init was successful */
@@ -75,24 +81,45 @@ int main() {
 
   while (true) {
     t_start = t.read_ms();
-
-    GetWheelAngVSp(&wheel_speed_sp); /* Setpoint */
-    GetWheelAngV(&wheel_speed_fb);   /* Feedback */
-
-    imu2.ReadData(&fxos_data);
-    //fxos_ax = -1.0f * fxos_data.ay;
-    //fxos_ay = fxos_data.ax;
-
-    imu1.ReadAccelData(&mpu_accel_data);
-    //mpu_ax = -1.0f * mpu_accel_data.ax;
-    //mpu_ay = -1.0f * mpu_accel_data.ay;
-
-    imu1.ReadGyroData(&mpu_gyro_data);
-
 #if ROS_ENABLED
-    chatter.publish(&str_msg);
+    Populate_State_Msg();
+    state_msg_pub.publish(&state_msg);
     nh.spinOnce();
 #endif
     ThisThread::sleep_for(50-(t.read_ms()-t_start));
   }
+}
+
+void Populate_State_Msg(void) {
+    GetWheelAngVSp(&wheel_speed_sp); /* Setpoint */
+    state_msg.l_wheel_sp = wheel_speed_sp.l;
+    state_msg.r_wheel_sp = wheel_speed_sp.r;
+
+    GetWheelAngV(&wheel_speed_fb);   /* Feedback */
+    state_msg.l_wheel_fb = wheel_speed_fb.l;
+    state_msg.r_wheel_fb = wheel_speed_fb.r;
+
+    imu2.ReadData(&fxos_data);
+    state_msg.fxos_ax = -1.0f * fxos_data.ay;
+    state_msg.fxos_ay = fxos_data.ax;
+    state_msg.fxos_az = fxos_data.az;
+    state_msg.fxos_mx = fxos_data.mx;
+    state_msg.fxos_my = fxos_data.my;
+    state_msg.fxos_mz = fxos_data.mz;
+
+    imu1.ReadAccelData(&mpu_accel_data);
+    state_msg.mpu_ax = -1.0f * mpu_accel_data.ax;
+    state_msg.mpu_ay = -1.0f * mpu_accel_data.ay;
+    state_msg.mpu_az = mpu_accel_data.az;
+
+    imu1.ReadGyroData(&mpu_gyro_data);
+    state_msg.mpu_gx = mpu_gyro_data.gx;
+    state_msg.mpu_gy = mpu_gyro_data.gy;
+    state_msg.mpu_gz = mpu_gyro_data.gz;
+}
+
+void Cmd_Msg_Callback(const robo_car_if::cmd& msg) {
+  // TODO: add range checks
+  UpdateWheelAngV(msg.r_wheel_sp, msg.l_wheel_sp, true);
+  pcdebug.printf("robo_car_cmd msg received!");
 }
