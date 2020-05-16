@@ -202,11 +202,10 @@ void GetWheelAngV(Wheel_Ang_V_T *dest) {
   }
 }
 
-void UpdateWheelAngV(float l_sp, float r_sp, bool reset_pid) {
-  r_motor_ctrl_data.sp_rad_s = r_sp;
-  l_motor_ctrl_data.sp_rad_s = l_sp;
+void UpdateWheelAngV(Wheel_Ang_V_T *sp, bool reset_pid) {
+  r_motor_ctrl_data.sp_rad_s = sp->r;
+  l_motor_ctrl_data.sp_rad_s = sp->l;
   ctrl_active = true;
-
   if (reset_pid) {
     r_pid.Reset();
     l_pid.Reset();
@@ -214,6 +213,9 @@ void UpdateWheelAngV(float l_sp, float r_sp, bool reset_pid) {
 }
 
 void StopMotors(void) {
-  UpdateWheelAngV(0.0f, 0.0f, true);
+  Wheel_Ang_V_T sp;
+  sp.r = 0.0f;
+  sp.l = 0.0f;
+  UpdateWheelAngV(&sp, true);
   awaiting_stop = true;
 }

@@ -122,10 +122,12 @@ void Populate_State_Msg(void) {
 }
 
 void Cmd_Msg_Callback(const robo_car_if::cmd& msg) {
-  // TODO: add range checks
-  UpdateWheelAngV(msg.r_wheel_sp, msg.l_wheel_sp, true);
-
-  if (0 != msg.stop) {
+  Wheel_Ang_V_T sp;
+  if (0 == msg.stop) {
+    sp.r = msg.r_wheel_sp;
+    sp.l = msg.l_wheel_sp;
+    UpdateWheelAngV(&sp, true);
+  } else {
     StopMotors();
   }
 }
