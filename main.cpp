@@ -91,6 +91,9 @@ int main() {
 }
 
 void Populate_State_Msg(void) {
+    state_msg.timestamp = t.read_us();
+    state_msg.vbatt = ReadBatteryVoltage();
+
     GetWheelAngVSp(&wheel_speed_sp); /* Setpoint */
     state_msg.l_wheel_sp = wheel_speed_sp.l;
     state_msg.r_wheel_sp = wheel_speed_sp.r;

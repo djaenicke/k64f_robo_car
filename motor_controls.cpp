@@ -13,7 +13,7 @@
 #define R_Ke 0.255f
 #define L_Ke 0.215f
 
-#define L_Kp 1.95f
+#define L_Kp 1.65f
 #define L_Ki 3.9f
 #define L_Kd 0.05f
 
