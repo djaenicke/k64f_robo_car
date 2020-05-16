@@ -14,6 +14,8 @@ namespace robo_car_if
     public:
       typedef int32_t _timestamp_type;
       _timestamp_type timestamp;
+      typedef float _vbatt_type;
+      _vbatt_type vbatt;
       typedef float _r_wheel_sp_type;
       _r_wheel_sp_type r_wheel_sp;
       typedef float _l_wheel_sp_type;
@@ -49,6 +51,7 @@ namespace robo_car_if
 
     state():
       timestamp(0),
+      vbatt(0),
       r_wheel_sp(0),
       l_wheel_sp(0),
       r_wheel_fb(0),
@@ -81,6 +84,16 @@ namespace robo_car_if
       *(outbuffer + offset + 2) = (u_timestamp.base >> (8 * 2)) & 0xFF;
       *(outbuffer + offset + 3) = (u_timestamp.base >> (8 * 3)) & 0xFF;
       offset += sizeof(this->timestamp);
+      union {
+        float real;
+        uint32_t base;
+      } u_vbatt;
+      u_vbatt.real = this->vbatt;
+      *(outbuffer + offset + 0) = (u_vbatt.base >> (8 * 0)) & 0xFF;
+      *(outbuffer + offset + 1) = (u_vbatt.base >> (8 * 1)) & 0xFF;
+      *(outbuffer + offset + 2) = (u_vbatt.base >> (8 * 2)) & 0xFF;
+      *(outbuffer + offset + 3) = (u_vbatt.base >> (8 * 3)) & 0xFF;
+      offset += sizeof(this->vbatt);
       union {
         float real;
         uint32_t base;
@@ -261,6 +274,17 @@ namespace robo_car_if
       union {
         float real;
         uint32_t base;
+      } u_vbatt;
+      u_vbatt.base = 0;
+      u_vbatt.base |= ((uint32_t) (*(inbuffer + offset + 0))) << (8 * 0);
+      u_vbatt.base |= ((uint32_t) (*(inbuffer + offset + 1))) << (8 * 1);
+      u_vbatt.base |= ((uint32_t) (*(inbuffer + offset + 2))) << (8 * 2);
+      u_vbatt.base |= ((uint32_t) (*(inbuffer + offset + 3))) << (8 * 3);
+      this->vbatt = u_vbatt.real;
+      offset += sizeof(this->vbatt);
+      union {
+        float real;
+        uint32_t base;
       } u_r_wheel_sp;
       u_r_wheel_sp.base = 0;
       u_r_wheel_sp.base |= ((uint32_t) (*(inbuffer + offset + 0))) << (8 * 0);
@@ -438,7 +462,7 @@ namespace robo_car_if
     }
 
     const char * getType(){ return "robo_car_if/state"; };
-    const char * getMD5(){ return "54b08e143cc7b122c3683c71151f8fb7"; };
+    const char * getMD5(){ return "597e0de29e8f82a4967c15e4eaaef45c"; };
 
   };
 
