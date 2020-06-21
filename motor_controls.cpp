@@ -41,8 +41,8 @@ static pid::PID l_pid(L_Kp, L_Ki, L_Kd, CYCLE_TIME, TOLERANCE);
 static pid::PID r_pid(R_Kp, R_Ki, R_Kd, CYCLE_TIME, TOLERANCE);
 
 /* Wheel speed encoder objects */
-static encoder::Encoder r_encoder(R_ENCODER, PullUp, PULSES_PER_REV, 50);
-static encoder::Encoder l_encoder(L_ENCODER, PullUp, PULSES_PER_REV, 50);
+static encoder::Encoder r_encoder(R_ENCODER, PullUp, PULSES_PER_REV, 75);
+static encoder::Encoder l_encoder(L_ENCODER, PullUp, PULSES_PER_REV, 75);
 
 /* Variables */
 static Ctrl_Data_T r_motor_ctrl_data;
@@ -103,14 +103,13 @@ void RunMotorControls(void) {
     l_motor_ctrl_data.fb_rad_s = LpFilter(l_encoder.GetWheelSpeed() * sign, \
                                             l_motor_ctrl_data.fb_rad_s, \
                                             WHEEL_SPEED_FILT_ALPHA);
-
-    if (ctrl_active) {
 #if TUNE
         debug_out.printf("%d,%.2f,%.2f,%.2f,%.2f,%d,%d\n\r", \
                         t.read_us(), r_motor_ctrl_data.sp_rad_s, \
                         r_motor_ctrl_data.fb_rad_s, l_motor_ctrl_data.fb_rad_s, \
                         meas_vbatt, r_motor_ctrl_data.u_percent, l_motor_ctrl_data.u_percent);
 #endif
+    if (ctrl_active) {
         Run_Controller(&r_motor_ctrl_data);
         Run_Controller(&l_motor_ctrl_data);
 

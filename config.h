@@ -4,10 +4,10 @@
 #include "io_abstraction.h"
 
 /* Common constants */
-#define ROBO_CAR_VERSION     (1)
+#define ROBO_CAR_VERSION     (2)
 #define OPEN_LOOP            (0)
 #define CYCLE_TIME           (0.025f)
-#define TUNE                 (0)
+#define TUNE                 (1)
 
 #define ROS_ENABLED          (1)
 
