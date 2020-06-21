@@ -10,23 +10,9 @@
 #include "lp_filter.h"
 #include "config.h"
 
-#define R_Ke 0.255f
-#define L_Ke 0.215f
-
-#define L_Kp 1.65f
-#define L_Ki 3.9f
-#define L_Kd 0.05f
-
-#define R_Kp 1.45f
-#define R_Ki 3.5f
-#define R_Kd 0.05f
-
 #define TOLERANCE              (0.0f) /* rad/s */
 #define STOP_THRESHOLD         (0.5f) /* rad/s */
 #define VBATT_FILT_ALPHA       (0.4f)
-#define PULSES_PER_REV         (192)
-#define WHEEL_SPEED_FILT_ALPHA (0.2f)
-#define MAX_MOTOR_VOLTAGE      (6.0f)
 
 /* Redefine motors ids to locations for code readability */
 #define R_MOTOR tb6612::MOTOR_A
