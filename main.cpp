@@ -32,6 +32,11 @@ static DigitalOut red_led(LED_RED);
 static DigitalOut green_led(LED_GREEN);
 static DigitalOut blue_led(LED_BLUE);
 
+#if TUNE
+static InterruptIn go_button(SW2);
+static InterruptIn stop_button(SW3);
+#endif
+
 static Thread motor_controls_thread(osPriorityRealtime);
 
 static mpu6050::MPU6050 imu1(I2C_SDA, I2C_SCL);
@@ -44,6 +49,9 @@ mpu6050::Gyro_Data_T  mpu_gyro_data;
 fxos8700::Sensor_Data_T fxos_data;
 
 static void Populate_State_Msg(void);
+#if TUNE
+static void Go(void);
+#endif
 
 // main() runs in its own thread in the OS
 int main() {
@@ -73,6 +81,11 @@ int main() {
   red_led.write(1);
   green_led.write(1);
   blue_led.write(0);
+
+#if TUNE
+  go_button.rise(&Go);
+  stop_button.rise(&StopMotors);
+#endif
 
   /* Start the threads */
   motor_controls_thread.start(RunMotorControls);
@@ -131,3 +144,12 @@ void Cmd_Msg_Callback(const robo_car_if::cmd& msg) {
     StopMotors();
   }
 }
+
+#if TUNE
+void Go(void) {
+  Wheel_Ang_V_T sp;
+  sp.r = 15.0f;
+  sp.l = 15.0f;
+  UpdateWheelAngV(&sp, true);
+}
+#endif

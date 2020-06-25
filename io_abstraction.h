@@ -22,7 +22,4 @@
 #define I2C_SCL (PTE24)
 #define I2C_SDA (PTE25)
 
-#define ESP8266_TX   (PTC17)
-#define ESP8266_RX   (PTC16)
-
 #endif  // IO_ABSTRACTION_H_
