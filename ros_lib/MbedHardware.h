@@ -17,7 +17,7 @@
 class MbedHardware {
  public:
   MbedHardware():iostream_(ROS_TX, ROS_RX) {
-    baud_ = 57600;
+    baud_ = ROS_SERIAL_BAUD;
     t_.start();
   }
 

@@ -12,13 +12,17 @@
 #include <robo_car_if/state.h>
 #include <robo_car_if/cmd.h>
 
+#define LOOPS_PER_SEC (1.0f / STATE_MSG_RATE)
+
 static Serial pcdebug(USBTX, USBRX, 115200);
 
 static Timer t;
 static int t_start;
 
 /* ROS objects/variables */
+#if ROS_ENABLED
 static ros::NodeHandle nh;
+#endif
 static robo_car_if::state state_msg;
 static robo_car_if::cmd cmd_msg;
 
@@ -39,8 +43,10 @@ static InterruptIn stop_button(SW3);
 
 static Thread motor_controls_thread(osPriorityRealtime);
 
+#if IMUS_ENABLED
 static mpu6050::MPU6050 imu1(I2C_SDA, I2C_SCL);
 static fxos8700::FXOS8700 imu2(I2C_SDA, I2C_SCL);
+#endif
 
 Wheel_Ang_V_T wheel_speed_sp;
 Wheel_Ang_V_T wheel_speed_fb;
@@ -55,6 +61,7 @@ static void Go(void);
 
 // main() runs in its own thread in the OS
 int main() {
+  uint8_t loop_cnt = 0;
   /* Initialization code */
 
   /* Green LED means init is in progress */
@@ -65,11 +72,13 @@ int main() {
   InitMotorControls();
 
   /* Wait 2 seconds before calibrating the IMUs so 
-     the user doesn't affect the calibration process by touching the robot*/
+     the user doesn't affect the calibration process by touching the robot */
   ThisThread::sleep_for(2000);
 
+#if IMUS_ENABLED
   imu1.Init();
   imu2.Init();
+#endif
 
 #if ROS_ENABLED
   nh.initNode();
@@ -99,7 +108,13 @@ int main() {
     state_msg_pub.publish(&state_msg);
     nh.spinOnce();
 #endif
-    ThisThread::sleep_for(50-(t.read_ms()-t_start));
+
+    if (++loop_cnt > (uint8_t) LOOPS_PER_SEC) {
+      pcdebug.printf("Heartbeat...\r\n");
+      loop_cnt = 0;
+    }
+
+    ThisThread::sleep_for((STATE_MSG_RATE * MS_2_S) - (t.read_ms() - t_start));
   }
 }
 
@@ -115,6 +130,7 @@ void Populate_State_Msg(void) {
     state_msg.l_wheel_fb = wheel_speed_fb.l;
     state_msg.r_wheel_fb = wheel_speed_fb.r;
 
+#if IMUS_ENABLED
     imu2.ReadData(&fxos_data);
     state_msg.fxos_ax = -1.0f * fxos_data.ay;
     state_msg.fxos_ay = fxos_data.ax;
@@ -132,6 +148,7 @@ void Populate_State_Msg(void) {
     state_msg.mpu_gx = mpu_gyro_data.gx;
     state_msg.mpu_gy = mpu_gyro_data.gy;
     state_msg.mpu_gz = mpu_gyro_data.gz;
+#endif
 }
 
 void Cmd_Msg_Callback(const robo_car_if::cmd& msg) {

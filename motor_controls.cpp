@@ -14,10 +14,6 @@
 #define STOP_THRESHOLD         (0.5f) /* rad/s */
 #define VBATT_FILT_ALPHA       (0.4f)
 
-/* Redefine motors ids to locations for code readability */
-#define R_MOTOR tb6612::MOTOR_A
-#define L_MOTOR tb6612::MOTOR_B
-
 typedef struct {
   tb6612::Motor_Id_T id;
   pid::PID * pid_ptr;
@@ -34,7 +30,8 @@ typedef struct {
 
 /* Motor driver object */
 static tb6612::TB6612 motor_driver(MOTOR_A_PWM, MOTOR_B_PWM, MOTOR_A_IN1, \
-                                   MOTOR_A_IN2, MOTOR_B_IN1, MOTOR_B_IN2);
+                                   MOTOR_A_IN2, MOTOR_B_IN1, MOTOR_B_IN2,
+                                   MOTOR_A_POLARITY, MOTOR_B_POLARITY);
 
 /* PID controller objects */
 static pid::PID l_pid(L_Kp, L_Ki, L_Kd, CYCLE_TIME, TOLERANCE);
@@ -130,7 +127,7 @@ if (ctrl_active) {
     motor_driver.SetDC(R_MOTOR, r_motor_ctrl_data.u_percent);
     motor_driver.SetDC(L_MOTOR, l_motor_ctrl_data.u_percent);
 
-    ThisThread::sleep_for(CYCLE_TIME*1000);
+    ThisThread::sleep_for(CYCLE_TIME * MS_2_S);
   }
 }
 

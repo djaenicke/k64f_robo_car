@@ -18,6 +18,7 @@
 
 #define ROS_RX (PTC14)
 #define ROS_TX (PTC15)
+#define ROS_SERIAL_BAUD 57600
 
 #define I2C_SCL (PTE24)
 #define I2C_SDA (PTE25)
