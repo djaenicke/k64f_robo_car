@@ -7,6 +7,6 @@ BUILD
 mbed_app.json
 
 tb6612_driver
-wheel_encoder_lib
 pid_controller
 buffered_serial
+quad_encoder

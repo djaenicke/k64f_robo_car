@@ -10,9 +10,9 @@
 #define OPEN_LOOP            (0)
 #define STATE_MSG_RATE       (0.050f)
 #define CYCLE_TIME           (0.025f)
-#define TUNE                 (0)
+#define TUNE                 (1)
 
-#define ROS_ENABLED          (1)
+#define ROS_ENABLED          (0)
 #define IMUS_ENABLED         (1)
 
 /* RoboCar version 1 constants */
@@ -72,8 +72,8 @@
 #define L_Ki 7.5f
 #define L_Kd 0.00f
 
-#define PULSES_PER_REV         (240)
-#define WHEEL_SPEED_FILT_ALPHA (0.2f)
+#define PULSES_PER_REV         (960)
+#define WHEEL_SPEED_FILT_ALPHA (1.0f)  // Disabled with 1
 #define MAX_MOTOR_VOLTAGE      (12.0f)
 #else
   #error "Unknown RoboCar version!"
