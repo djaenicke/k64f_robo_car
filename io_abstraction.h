@@ -16,8 +16,8 @@
 #define R_ENCODER (PTB9)
 #define L_ENCODER (PTA1)
 
-#define ROS_RX (PTC14)
-#define ROS_TX (PTC15)
+#define ROS_RX (USBRX)
+#define ROS_TX (USBTX)
 #define ROS_SERIAL_BAUD 57600
 
 #define I2C_SCL (PTE24)

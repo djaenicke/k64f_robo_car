@@ -1,12 +1,12 @@
-#ifndef _ROS_robo_car_if_cmd_h
-#define _ROS_robo_car_if_cmd_h
+#ifndef _ROS_robo_car_ros_if_cmd_h
+#define _ROS_robo_car_ros_if_cmd_h
 
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 #include "ros/msg.h"
 
-namespace robo_car_if
+namespace robo_car_ros_if
 {
 
   class cmd : public ros::Msg
@@ -26,7 +26,7 @@ namespace robo_car_if
     {
     }
 
-    virtual int serialize(unsigned char *outbuffer) const
+    virtual int serialize(unsigned char *outbuffer) const override
     {
       int offset = 0;
       *(outbuffer + offset + 0) = (this->stop >> (8 * 0)) & 0xFF;
@@ -54,7 +54,7 @@ namespace robo_car_if
       return offset;
     }
 
-    virtual int deserialize(unsigned char *inbuffer)
+    virtual int deserialize(unsigned char *inbuffer) override
     {
       int offset = 0;
       this->stop =  ((uint8_t) (*(inbuffer + offset)));
@@ -84,8 +84,8 @@ namespace robo_car_if
      return offset;
     }
 
-    const char * getType(){ return "robo_car_if/cmd"; };
-    const char * getMD5(){ return "dcaa3008d79ae4596d78607cd51d54a5"; };
+    virtual const char * getType() override { return "robo_car_ros_if/cmd"; };
+    virtual const char * getMD5() override { return "dcaa3008d79ae4596d78607cd51d54a5"; };
 
   };
 

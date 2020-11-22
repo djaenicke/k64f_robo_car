@@ -45,7 +45,7 @@
 #define WHEEL_SPEED_FILT_ALPHA (0.2f)
 #define MAX_MOTOR_VOLTAGE      (6.0f)
 
-/* RoboCar version 1 constants */
+/* RoboCar version 2 constants */
 #elif (2 == ROBO_CAR_VERSION)
 
 /* Battery monitor */

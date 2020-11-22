@@ -9,12 +9,10 @@
 #include "fxos8700.h"
 
 #include <ros.h>
-#include <robo_car_if/state.h>
-#include <robo_car_if/cmd.h>
+#include <robo_car_ros_if/state.h>
+#include <robo_car_ros_if/cmd.h>
 
 #define LOOPS_PER_SEC (1.0f / STATE_MSG_RATE)
-
-static Serial pcdebug(USBTX, USBRX, 115200);
 
 static Timer t;
 static int t_start;
@@ -23,13 +21,13 @@ static int t_start;
 #if ROS_ENABLED
 static ros::NodeHandle nh;
 #endif
-static robo_car_if::state state_msg;
-static robo_car_if::cmd cmd_msg;
+static robo_car_ros_if::state state_msg;
+static robo_car_ros_if::cmd cmd_msg;
 
-void Cmd_Msg_Callback(const robo_car_if::cmd& msg);
+void Cmd_Msg_Callback(const robo_car_ros_if::cmd& msg);
 
 static ros::Publisher state_msg_pub("robo_car_state", &state_msg);
-static ros::Subscriber<robo_car_if::cmd> state_cmd_sub("robo_car_cmd", &Cmd_Msg_Callback);
+static ros::Subscriber<robo_car_ros_if::cmd> state_cmd_sub("robo_car_cmd", &Cmd_Msg_Callback);
 /* End - ROS objects/variables */
 
 static DigitalOut red_led(LED_RED);
@@ -61,7 +59,6 @@ static void Go(void);
 
 // main() runs in its own thread in the OS
 int main() {
-  uint8_t loop_cnt = 0;
   /* Initialization code */
 
   /* Green LED means init is in progress */
@@ -109,11 +106,6 @@ int main() {
     nh.spinOnce();
 #endif
 
-    if (++loop_cnt > (uint8_t) LOOPS_PER_SEC) {
-      pcdebug.printf("Heartbeat...\r\n");
-      loop_cnt = 0;
-    }
-
     ThisThread::sleep_for((STATE_MSG_RATE * MS_2_S) - (t.read_ms() - t_start));
   }
 }
@@ -151,7 +143,7 @@ void Populate_State_Msg(void) {
 #endif
 }
 
-void Cmd_Msg_Callback(const robo_car_if::cmd& msg) {
+void Cmd_Msg_Callback(const robo_car_ros_if::cmd& msg) {
   Wheel_Ang_V_T sp;
   if (0 == msg.stop) {
     sp.r = msg.r_wheel_sp;
