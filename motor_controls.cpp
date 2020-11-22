@@ -1,11 +1,12 @@
 #include <cmath>
 
+#include "PinNames.h"
 #include "mbed.h"
 #include "motor_controls.h"
 #include "io_abstraction.h"
 #include "tb6612.h"
 #include "pid.h"
-#include "encoder.h"
+#include "quad_encoder.h"
 #include "battery_monitor.h"
 #include "lp_filter.h"
 #include "config.h"
@@ -37,9 +38,9 @@ static tb6612::TB6612 motor_driver(MOTOR_A_PWM, MOTOR_B_PWM, MOTOR_A_IN1, \
 static pid::PID l_pid(L_Kp, L_Ki, L_Kd, CYCLE_TIME, TOLERANCE);
 static pid::PID r_pid(R_Kp, R_Ki, R_Kd, CYCLE_TIME, TOLERANCE);
 
-/* Wheel speed encoder objects */
-static encoder::Encoder r_encoder(R_ENCODER, PullUp, PULSES_PER_REV, 75);
-static encoder::Encoder l_encoder(L_ENCODER, PullUp, PULSES_PER_REV, 75);
+/* Wheel speed quadrature encoder objects */
+static quad_encoder::QuadEncoder r_encoder(R_ENCODER_B, PullNone, R_ENCODER_A, PullNone);
+static quad_encoder::QuadEncoder l_encoder(L_ENCODER_A, PullNone, L_ENCODER_B, PullNone);
 
 /* Variables */
 static Ctrl_Data_T r_motor_ctrl_data;
@@ -48,7 +49,9 @@ static bool  ctrl_active   = false;
 static bool  awaiting_stop = false;
 static float meas_vbatt    = 0.0f;
 static float max_vbatt     = 0.0f;
-static const float min_v   = 0.0f;
+static const float MIN_V   = 0.0f;
+static const float PULSES_2_RPS = (1.0f / PULSES_PER_REV) * 2 * 3.14159 * (1 / CYCLE_TIME);
+
 
 #if TUNE
 static Serial debug_out(USBTX, USBRX, 115200);
@@ -78,8 +81,6 @@ void InitMotorControls(void) {
 }
 
 void RunMotorControls(void) {
-  int8_t sign;
-  
   while (1) {
     /* Determine the max actuation voltage based on the vbatt measurement */
     meas_vbatt = LpFilter(ReadBatteryVoltage(), meas_vbatt, VBATT_FILT_ALPHA);
@@ -91,34 +92,32 @@ void RunMotorControls(void) {
     }
     
     /* Measure the current wheel speeds via the encoders */
-    sign = tb6612::FORWARD == motor_driver.GetDirection(R_MOTOR) ? 1 : -1;
-    r_motor_ctrl_data.fb_rad_s = LpFilter(r_encoder.GetWheelSpeed() * sign, \
-                                            r_motor_ctrl_data.fb_rad_s, \
-                                            WHEEL_SPEED_FILT_ALPHA);
+    r_motor_ctrl_data.fb_rad_s = LpFilter(r_encoder.GetPulses() * PULSES_2_RPS, \
+                                          r_motor_ctrl_data.fb_rad_s, \
+                                          WHEEL_SPEED_FILT_ALPHA);
 
-    sign = tb6612::FORWARD == motor_driver.GetDirection(L_MOTOR) ? 1 : -1;
-    l_motor_ctrl_data.fb_rad_s = LpFilter(l_encoder.GetWheelSpeed() * sign, \
-                                            l_motor_ctrl_data.fb_rad_s, \
-                                            WHEEL_SPEED_FILT_ALPHA);
-if (ctrl_active) {
+    l_motor_ctrl_data.fb_rad_s = LpFilter(l_encoder.GetPulses() * PULSES_2_RPS, \
+                                          l_motor_ctrl_data.fb_rad_s, \
+                                          WHEEL_SPEED_FILT_ALPHA);
+    if (ctrl_active) {
 #if TUNE
-        debug_out.printf("%d,%.2f,%.2f,%.2f,%.2f,%d,%d\n\r", \
-                        t.read_us(), r_motor_ctrl_data.sp_rad_s, \
-                        r_motor_ctrl_data.fb_rad_s, l_motor_ctrl_data.fb_rad_s, \
-                        meas_vbatt, r_motor_ctrl_data.u_percent, l_motor_ctrl_data.u_percent);
+      debug_out.printf("%d,%.2f,%.2f,%.2f,%.2f,%d,%d\n\r", \
+                      t.read_us(), r_motor_ctrl_data.sp_rad_s, \
+                      r_motor_ctrl_data.fb_rad_s, l_motor_ctrl_data.fb_rad_s, \
+                      meas_vbatt, r_motor_ctrl_data.u_percent, l_motor_ctrl_data.u_percent);
 #endif
-        Run_Controller(&r_motor_ctrl_data);
-        Run_Controller(&l_motor_ctrl_data);
+      Run_Controller(&r_motor_ctrl_data);
+      Run_Controller(&l_motor_ctrl_data);
 
-        /* Are we slowing down to stop? */
-        if (awaiting_stop && (r_motor_ctrl_data.e_rad_s < STOP_THRESHOLD) \
-            && (l_motor_ctrl_data.e_rad_s < STOP_THRESHOLD)) {
-        motor_driver.Stop(R_MOTOR);
-        motor_driver.Stop(L_MOTOR);
+      /* Are we slowing down to stop? */
+      if (awaiting_stop && (r_motor_ctrl_data.e_rad_s < STOP_THRESHOLD) \
+          && (l_motor_ctrl_data.e_rad_s < STOP_THRESHOLD)) {
+      motor_driver.Stop(R_MOTOR);
+      motor_driver.Stop(L_MOTOR);
 
-        ctrl_active = false;
-        awaiting_stop = false;
-        }
+      ctrl_active = false;
+      awaiting_stop = false;
+      }
     } else {
         r_motor_ctrl_data.u_percent = 0;
         l_motor_ctrl_data.u_percent = 0;
@@ -149,19 +148,17 @@ static void Run_Controller(Ctrl_Data_T * ctrl_data) {
   /* Run the PID controller */
   ctrl_data->u_volts = ctrl_data->pid_ptr->Step(ctrl_data->sp_volts, \
                                                 ctrl_data->fb_volts, \
-                                                max_vbatt, min_v);
+                                                max_vbatt, MIN_V);
 #else
   /* Saturate the set points to be within the actuator voltage range */
   int8_t sign;
   sign = signbit(ctrl_data->sp_volts) ? -1 : 1;
-  ctrl_data->u_volts = fabs(ctrl_data->sp_volts) > min_v ? \
-                        ctrl_data->sp_volts : sign * min_v;
   ctrl_data->u_volts = fabs(ctrl_data->sp_volts) < max_vbatt ? \
                         ctrl_data->sp_volts : sign * max_vbatt;
 #endif  // OPEN_LOOP
 
   /* Convert the actuation voltage to a percent duty cycle */
-  ctrl_data->u_percent = (uint8_t)(fabs(ctrl_data->u_volts) * (100/meas_vbatt));
+  ctrl_data->u_percent = (uint8_t)(fabs(ctrl_data->u_volts) * (100 / meas_vbatt));
 
   /* Determine direction */
   dir = signbit(ctrl_data->u_volts) ? tb6612::REVERSE : tb6612::FORWARD;
@@ -170,21 +167,21 @@ static void Run_Controller(Ctrl_Data_T * ctrl_data) {
   motor_driver.SetDirection(ctrl_data->id, dir);
 }
 
-void GetWheelAngVSp(Wheel_Ang_V_T *dest) {
+void GetWheelAngVSp(Wheel_Ang_V_T* dest) {
     if (dest) {
     dest->r = r_motor_ctrl_data.sp_rad_s;
     dest->l = l_motor_ctrl_data.sp_rad_s;
   }
 }
 
-void GetWheelAngV(Wheel_Ang_V_T *dest) {
+void GetWheelAngV(Wheel_Ang_V_T* dest) {
   if (dest) {
     dest->r = r_motor_ctrl_data.fb_rad_s;
     dest->l = l_motor_ctrl_data.fb_rad_s;
   }
 }
 
-void UpdateWheelAngV(Wheel_Ang_V_T *sp, bool reset_pid) {
+void UpdateWheelAngV(Wheel_Ang_V_T* sp, bool reset_pid) {
   r_motor_ctrl_data.sp_rad_s = sp->r;
   l_motor_ctrl_data.sp_rad_s = sp->l;
   ctrl_active = true;

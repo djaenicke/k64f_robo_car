@@ -6,15 +6,16 @@
 #define VBATT_ADC (A0)
 
 #define MOTOR_A_PWM (PTA2)
-#define MOTOR_B_PWM (PTC2)
-
 #define MOTOR_A_IN1 (PTD3)
 #define MOTOR_A_IN2 (PTD1)
+#define R_ENCODER_A (PTB9)
+#define R_ENCODER_B (PTB23)
+
+#define MOTOR_B_PWM (PTC2)
 #define MOTOR_B_IN1 (PTC4)
 #define MOTOR_B_IN2 (PTC12)
-
-#define R_ENCODER (PTB9)
-#define L_ENCODER (PTA1)
+#define L_ENCODER_A (PTA1)
+#define L_ENCODER_B (PTC3)
 
 #define ROS_RX (USBRX)
 #define ROS_TX (USBTX)

@@ -19,8 +19,8 @@
 #if (1 == ROBO_CAR_VERSION)
 
 /* Battery monitor */
-#define R1               (4.65f)  // 4.7k nominal
-#define R2               (2.161f) // 2.2k nominal
+#define R1 (4.65f) // 4.7k nominal
+#define R2 (2.161f) // 2.2k nominal
 
 /* Physical dimensions */
 
@@ -49,8 +49,8 @@
 #elif (2 == ROBO_CAR_VERSION)
 
 /* Battery monitor */
-#define R1               (3.30f)  // 3.3k nominal
-#define R2               (0.986f) // 1.0k nominal
+#define R1 (3.30f)  // 3.3k nominal
+#define R2 (0.986f)  // 1.0k nominal
 
 /* Physical dimensions */
 
@@ -72,8 +72,8 @@
 #define L_Ki 7.5f
 #define L_Kd 0.00f
 
-#define PULSES_PER_REV         (240)
-#define WHEEL_SPEED_FILT_ALPHA (0.2f)
+#define PULSES_PER_REV         (960)
+#define WHEEL_SPEED_FILT_ALPHA (0.4f)
 #define MAX_MOTOR_VOLTAGE      (12.0f)
 #else
   #error "Unknown RoboCar version!"
