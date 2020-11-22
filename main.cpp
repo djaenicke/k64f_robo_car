@@ -9,33 +9,42 @@
 #include "fxos8700.h"
 
 #include <ros.h>
-#include <robo_car_if/state.h>
-#include <robo_car_if/cmd.h>
+#include <robo_car_ros_if/state.h>
+#include <robo_car_ros_if/cmd.h>
 
-static Serial pcdebug(USBTX, USBRX, 115200);
+#define LOOPS_PER_SEC (1.0f / STATE_MSG_RATE)
 
 static Timer t;
 static int t_start;
 
 /* ROS objects/variables */
+#if ROS_ENABLED
 static ros::NodeHandle nh;
-static robo_car_if::state state_msg;
-static robo_car_if::cmd cmd_msg;
+#endif
+static robo_car_ros_if::state state_msg;
+static robo_car_ros_if::cmd cmd_msg;
 
-void Cmd_Msg_Callback(const robo_car_if::cmd& msg);
+void Cmd_Msg_Callback(const robo_car_ros_if::cmd& msg);
 
 static ros::Publisher state_msg_pub("robo_car_state", &state_msg);
-static ros::Subscriber<robo_car_if::cmd> state_cmd_sub("robo_car_cmd", &Cmd_Msg_Callback);
+static ros::Subscriber<robo_car_ros_if::cmd> state_cmd_sub("robo_car_cmd", &Cmd_Msg_Callback);
 /* End - ROS objects/variables */
 
 static DigitalOut red_led(LED_RED);
 static DigitalOut green_led(LED_GREEN);
 static DigitalOut blue_led(LED_BLUE);
 
+#if TUNE
+static InterruptIn go_button(SW2);
+static InterruptIn stop_button(SW3);
+#endif
+
 static Thread motor_controls_thread(osPriorityRealtime);
 
+#if IMUS_ENABLED
 static mpu6050::MPU6050 imu1(I2C_SDA, I2C_SCL);
 static fxos8700::FXOS8700 imu2(I2C_SDA, I2C_SCL);
+#endif
 
 Wheel_Ang_V_T wheel_speed_sp;
 Wheel_Ang_V_T wheel_speed_fb;
@@ -44,6 +53,9 @@ mpu6050::Gyro_Data_T  mpu_gyro_data;
 fxos8700::Sensor_Data_T fxos_data;
 
 static void Populate_State_Msg(void);
+#if TUNE
+static void Go(void);
+#endif
 
 // main() runs in its own thread in the OS
 int main() {
@@ -57,11 +69,13 @@ int main() {
   InitMotorControls();
 
   /* Wait 2 seconds before calibrating the IMUs so 
-     the user doesn't affect the calibration process by touching the robot*/
+     the user doesn't affect the calibration process by touching the robot */
   ThisThread::sleep_for(2000);
 
+#if IMUS_ENABLED
   imu1.Init();
   imu2.Init();
+#endif
 
 #if ROS_ENABLED
   nh.initNode();
@@ -73,6 +87,11 @@ int main() {
   red_led.write(1);
   green_led.write(1);
   blue_led.write(0);
+
+#if TUNE
+  go_button.rise(&Go);
+  stop_button.rise(&StopMotors);
+#endif
 
   /* Start the threads */
   motor_controls_thread.start(RunMotorControls);
@@ -86,7 +105,8 @@ int main() {
     state_msg_pub.publish(&state_msg);
     nh.spinOnce();
 #endif
-    ThisThread::sleep_for(50-(t.read_ms()-t_start));
+
+    ThisThread::sleep_for((STATE_MSG_RATE * MS_2_S) - (t.read_ms() - t_start));
   }
 }
 
@@ -102,6 +122,7 @@ void Populate_State_Msg(void) {
     state_msg.l_wheel_fb = wheel_speed_fb.l;
     state_msg.r_wheel_fb = wheel_speed_fb.r;
 
+#if IMUS_ENABLED
     imu2.ReadData(&fxos_data);
     state_msg.fxos_ax = -1.0f * fxos_data.ay;
     state_msg.fxos_ay = fxos_data.ax;
@@ -119,9 +140,10 @@ void Populate_State_Msg(void) {
     state_msg.mpu_gx = mpu_gyro_data.gx;
     state_msg.mpu_gy = mpu_gyro_data.gy;
     state_msg.mpu_gz = mpu_gyro_data.gz;
+#endif
 }
 
-void Cmd_Msg_Callback(const robo_car_if::cmd& msg) {
+void Cmd_Msg_Callback(const robo_car_ros_if::cmd& msg) {
   Wheel_Ang_V_T sp;
   if (0 == msg.stop) {
     sp.r = msg.r_wheel_sp;
@@ -131,3 +153,12 @@ void Cmd_Msg_Callback(const robo_car_if::cmd& msg) {
     StopMotors();
   }
 }
+
+#if TUNE
+void Go(void) {
+  Wheel_Ang_V_T sp;
+  sp.r = 15.0f;
+  sp.l = 15.0f;
+  UpdateWheelAngV(&sp, true);
+}
+#endif

@@ -10,27 +10,9 @@
 #include "lp_filter.h"
 #include "config.h"
 
-#define R_Ke 0.255f
-#define L_Ke 0.215f
-
-#define L_Kp 1.65f
-#define L_Ki 3.9f
-#define L_Kd 0.05f
-
-#define R_Kp 1.45f
-#define R_Ki 3.5f
-#define R_Kd 0.05f
-
 #define TOLERANCE              (0.0f) /* rad/s */
 #define STOP_THRESHOLD         (0.5f) /* rad/s */
 #define VBATT_FILT_ALPHA       (0.4f)
-#define PULSES_PER_REV         (192)
-#define WHEEL_SPEED_FILT_ALPHA (0.2f)
-#define MAX_MOTOR_VOLTAGE      (6.0f)
-
-/* Redefine motors ids to locations for code readability */
-#define R_MOTOR tb6612::MOTOR_A
-#define L_MOTOR tb6612::MOTOR_B
 
 typedef struct {
   tb6612::Motor_Id_T id;
@@ -48,15 +30,16 @@ typedef struct {
 
 /* Motor driver object */
 static tb6612::TB6612 motor_driver(MOTOR_A_PWM, MOTOR_B_PWM, MOTOR_A_IN1, \
-                                   MOTOR_A_IN2, MOTOR_B_IN1, MOTOR_B_IN2);
+                                   MOTOR_A_IN2, MOTOR_B_IN1, MOTOR_B_IN2,
+                                   MOTOR_A_POLARITY, MOTOR_B_POLARITY);
 
 /* PID controller objects */
 static pid::PID l_pid(L_Kp, L_Ki, L_Kd, CYCLE_TIME, TOLERANCE);
 static pid::PID r_pid(R_Kp, R_Ki, R_Kd, CYCLE_TIME, TOLERANCE);
 
 /* Wheel speed encoder objects */
-static encoder::Encoder r_encoder(R_ENCODER, PullUp, PULSES_PER_REV, 50);
-static encoder::Encoder l_encoder(L_ENCODER, PullUp, PULSES_PER_REV, 50);
+static encoder::Encoder r_encoder(R_ENCODER, PullUp, PULSES_PER_REV, 75);
+static encoder::Encoder l_encoder(L_ENCODER, PullUp, PULSES_PER_REV, 75);
 
 /* Variables */
 static Ctrl_Data_T r_motor_ctrl_data;
@@ -117,8 +100,7 @@ void RunMotorControls(void) {
     l_motor_ctrl_data.fb_rad_s = LpFilter(l_encoder.GetWheelSpeed() * sign, \
                                             l_motor_ctrl_data.fb_rad_s, \
                                             WHEEL_SPEED_FILT_ALPHA);
-
-    if (ctrl_active) {
+if (ctrl_active) {
 #if TUNE
         debug_out.printf("%d,%.2f,%.2f,%.2f,%.2f,%d,%d\n\r", \
                         t.read_us(), r_motor_ctrl_data.sp_rad_s, \
@@ -145,7 +127,7 @@ void RunMotorControls(void) {
     motor_driver.SetDC(R_MOTOR, r_motor_ctrl_data.u_percent);
     motor_driver.SetDC(L_MOTOR, l_motor_ctrl_data.u_percent);
 
-    ThisThread::sleep_for(CYCLE_TIME*1000);
+    ThisThread::sleep_for(CYCLE_TIME * MS_2_S);
   }
 }
 

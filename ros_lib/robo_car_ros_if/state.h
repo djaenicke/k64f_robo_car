@@ -1,12 +1,12 @@
-#ifndef _ROS_robo_car_if_state_h
-#define _ROS_robo_car_if_state_h
+#ifndef _ROS_robo_car_ros_if_state_h
+#define _ROS_robo_car_ros_if_state_h
 
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 #include "ros/msg.h"
 
-namespace robo_car_if
+namespace robo_car_ros_if
 {
 
   class state : public ros::Msg
@@ -71,7 +71,7 @@ namespace robo_car_if
     {
     }
 
-    virtual int serialize(unsigned char *outbuffer) const
+    virtual int serialize(unsigned char *outbuffer) const override
     {
       int offset = 0;
       union {
@@ -257,7 +257,7 @@ namespace robo_car_if
       return offset;
     }
 
-    virtual int deserialize(unsigned char *inbuffer)
+    virtual int deserialize(unsigned char *inbuffer) override
     {
       int offset = 0;
       union {
@@ -461,8 +461,8 @@ namespace robo_car_if
      return offset;
     }
 
-    const char * getType(){ return "robo_car_if/state"; };
-    const char * getMD5(){ return "597e0de29e8f82a4967c15e4eaaef45c"; };
+    virtual const char * getType() override { return "robo_car_ros_if/state"; };
+    virtual const char * getMD5() override { return "597e0de29e8f82a4967c15e4eaaef45c"; };
 
   };
 
