@@ -10,17 +10,17 @@
 #define OPEN_LOOP            (0)
 #define STATE_MSG_RATE       (0.050f)
 #define CYCLE_TIME           (0.025f)
-#define TUNE                 (1)
+#define TUNE                 (0)
 
-#define ROS_ENABLED          (0)
+#define ROS_ENABLED          (1)
 #define IMUS_ENABLED         (1)
 
 /* RoboCar version 1 constants */
 #if (1 == ROBO_CAR_VERSION)
 
 /* Battery monitor */
-#define R1               (4.65f)  // 4.7k nominal
-#define R2               (2.161f) // 2.2k nominal
+#define R1 (4.65f) // 4.7k nominal
+#define R2 (2.161f) // 2.2k nominal
 
 /* Physical dimensions */
 
@@ -49,8 +49,8 @@
 #elif (2 == ROBO_CAR_VERSION)
 
 /* Battery monitor */
-#define R1               (3.30f)  // 3.3k nominal
-#define R2               (0.986f) // 1.0k nominal
+#define R1 (3.30f)  // 3.3k nominal
+#define R2 (0.986f)  // 1.0k nominal
 
 /* Physical dimensions */
 
@@ -73,7 +73,7 @@
 #define L_Kd 0.00f
 
 #define PULSES_PER_REV         (960)
-#define WHEEL_SPEED_FILT_ALPHA (1.0f)  // Disabled with 1
+#define WHEEL_SPEED_FILT_ALPHA (0.4f)
 #define MAX_MOTOR_VOLTAGE      (12.0f)
 #else
   #error "Unknown RoboCar version!"
