@@ -21,13 +21,13 @@ static int t_start;
 #if ROS_ENABLED
 static ros::NodeHandle nh;
 #endif
-static oscar_pi::state state_msg;
-static oscar_pi::cmd cmd_msg;
+static robo_car_ros_if::state state_msg;
+static robo_car_ros_if::cmd cmd_msg;
 
-void Cmd_Msg_Callback(const oscar_pi::cmd& msg);
+void Cmd_Msg_Callback(const robo_car_ros_if::cmd& msg);
 
-static ros::Publisher state_msg_pub("oscar_robot_state", &state_msg);
-static ros::Subscriber<oscar_pi::cmd> state_cmd_sub("oscar_robo_cmd", &Cmd_Msg_Callback);
+static ros::Publisher state_msg_pub("robo_car_state", &state_msg);
+static ros::Subscriber<robo_car_ros_if::cmd> state_cmd_sub("robo_car_cmd", &Cmd_Msg_Callback);
 /* End - ROS objects/variables */
 
 static DigitalOut red_led(LED_RED);
@@ -143,7 +143,7 @@ void Populate_State_Msg(void) {
 #endif
 }
 
-void Cmd_Msg_Callback(const oscar_pi::cmd& msg) {
+void Cmd_Msg_Callback(const robo_car_ros_if::cmd& msg) {
   Wheel_Ang_V_T sp;
   if (0 == msg.stop) {
     sp.r = msg.r_wheel_sp;
