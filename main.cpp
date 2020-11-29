@@ -12,8 +12,6 @@
 #include <oscar_pi/state.h>
 #include <oscar_pi/cmd.h>
 
-#define LOOPS_PER_SEC (1.0f / STATE_MSG_RATE)
-
 static Timer t;
 static int t_start;
 
@@ -99,14 +97,17 @@ int main() {
   t.start();
 
   while (true) {
-    t_start = t.read_ms();
+    if ((t.read_ms() - t_start) >= STATE_MSG_RATE_MS)
+    {
+      t_start += STATE_MSG_RATE_MS;
 #if ROS_ENABLED
-    Populate_State_Msg();
-    state_msg_pub.publish(&state_msg);
+      Populate_State_Msg();
+      state_msg_pub.publish(&state_msg);
+#endif
+    }
+#if ROS_ENABLED
     nh.spinOnce();
 #endif
-
-    ThisThread::sleep_for((STATE_MSG_RATE * MS_2_S) - (t.read_ms() - t_start));
   }
 }
 

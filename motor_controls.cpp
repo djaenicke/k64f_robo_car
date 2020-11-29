@@ -35,14 +35,15 @@ static tb6612::TB6612 motor_driver(MOTOR_A_PWM, MOTOR_B_PWM, MOTOR_A_IN1, \
                                    MOTOR_A_POLARITY, MOTOR_B_POLARITY);
 
 /* PID controller objects */
-static pid::PID l_pid(L_Kp, L_Ki, L_Kd, CYCLE_TIME, TOLERANCE);
-static pid::PID r_pid(R_Kp, R_Ki, R_Kd, CYCLE_TIME, TOLERANCE);
+static pid::PID l_pid(L_Kp, L_Ki, L_Kd, CYCLE_TIME_S, TOLERANCE);
+static pid::PID r_pid(R_Kp, R_Ki, R_Kd, CYCLE_TIME_S, TOLERANCE);
 
 /* Wheel speed quadrature encoder objects */
 static quad_encoder::QuadEncoder r_encoder(R_ENCODER_B, PullNone, R_ENCODER_A, PullNone);
 static quad_encoder::QuadEncoder l_encoder(L_ENCODER_A, PullNone, L_ENCODER_B, PullNone);
 
 /* Variables */
+static Timer t;
 static Ctrl_Data_T r_motor_ctrl_data;
 static Ctrl_Data_T l_motor_ctrl_data;
 static bool  ctrl_active   = false;
@@ -50,12 +51,11 @@ static bool  awaiting_stop = false;
 static float meas_vbatt    = 0.0f;
 static float max_vbatt     = 0.0f;
 static const float MIN_V   = 0.0f;
-static const float PULSES_2_RPS = (1.0f / PULSES_PER_REV) * 2 * 3.14159 * (1 / CYCLE_TIME);
+static const float PULSES_2_RPS = (1.0f / PULSES_PER_REV) * 2 * 3.14159 * (1 / CYCLE_TIME_S);
 
 
 #if TUNE
 static Serial debug_out(USBTX, USBRX, 115200);
-static Timer t;
 #endif
 
 static void Run_Controller(Ctrl_Data_T * ctrl_data);
@@ -75,13 +75,15 @@ void InitMotorControls(void) {
   r_motor_ctrl_data.pid_ptr = &r_pid;
   l_motor_ctrl_data.pid_ptr = &l_pid;
 
-#if TUNE
   t.start();
-#endif
 }
 
 void RunMotorControls(void) {
+  int t_start = 0;
+
   while (1) {
+    t_start = t.read_ms();
+
     /* Determine the max actuation voltage based on the vbatt measurement */
     meas_vbatt = LpFilter(ReadBatteryVoltage(), meas_vbatt, VBATT_FILT_ALPHA);
 
@@ -126,7 +128,7 @@ void RunMotorControls(void) {
     motor_driver.SetDC(R_MOTOR, r_motor_ctrl_data.u_percent);
     motor_driver.SetDC(L_MOTOR, l_motor_ctrl_data.u_percent);
 
-    ThisThread::sleep_for(CYCLE_TIME * MS_2_S);
+    ThisThread::sleep_for((CYCLE_TIME_S * MS_2_S) - (t.read_ms() - t_start));
   }
 }
 
