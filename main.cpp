@@ -22,24 +22,17 @@ static int t_start;
 static ros::NodeHandle nh;
 #endif
 static oscar_pi::state state_msg;
-static oscar_pi::cmd cmd_msg;
 static sensor_msgs::Range fwd_uss_range_msg;
 
-void Cmd_Msg_Callback(const oscar_pi::cmd& msg);
 
 static ros::Publisher state_msg_pub("robot_state", &state_msg);
 static ros::Publisher range_msg_pub("fwd_uss", &fwd_uss_range_msg);
-static ros::Subscriber<oscar_pi::cmd> state_cmd_sub("robot_cmd", &Cmd_Msg_Callback);
+static ros::Subscriber<oscar_pi::cmd> cmd_sub("robot_cmd", &UpdateMotorControllerInputs);
 /* End - ROS objects/variables */
 
 static DigitalOut red_led(LED_RED);
 static DigitalOut green_led(LED_GREEN);
 static DigitalOut blue_led(LED_BLUE);
-
-#if TUNE
-static InterruptIn go_button(SW2);
-static InterruptIn stop_button(SW3);
-#endif
 
 static Thread motor_controls_thread(osPriorityRealtime);
 
@@ -57,9 +50,6 @@ static fxos8700::Sensor_Data_T fxos_data;
 
 #if ROS_ENABLED
 static void Populate_State_Msg(void);
-#endif
-#if TUNE
-static void Go(void);
 #endif
 
 // main() runs in its own thread in the OS
@@ -86,18 +76,13 @@ int main() {
   nh.initNode();
   nh.advertise(state_msg_pub);
   nh.advertise(range_msg_pub);
-  nh.subscribe(state_cmd_sub);
+  nh.subscribe(cmd_sub);
 #endif
 
   /* Blue LED means init was successful */
   red_led.write(1);
   green_led.write(1);
   blue_led.write(0);
-
-#if TUNE
-  go_button.rise(&Go);
-  stop_button.rise(&StopMotors);
-#endif
 
   /* Start the threads */
   motor_controls_thread.start(RunMotorControls);
@@ -124,6 +109,7 @@ int main() {
       fwd_uss_range_msg.header.seq++;
       Populate_State_Msg();
       state_msg_pub.publish(&state_msg);
+      state_msg.header.seq++;
 #endif
     }
 #if ROS_ENABLED
@@ -134,7 +120,7 @@ int main() {
 
 #if ROS_ENABLED
 void Populate_State_Msg(void) {
-    state_msg.timestamp = t.read_us();
+    state_msg.header.stamp = nh.now();
     state_msg.vbatt = ReadBatteryVoltage();
 
     GetWheelAngVSp(&wheel_speed_sp);  /* Setpoint */
@@ -164,25 +150,5 @@ void Populate_State_Msg(void) {
     state_msg.mpu_gy = mpu_gyro_data.gy;
     state_msg.mpu_gz = mpu_gyro_data.gz;
 #endif
-}
-#endif
-
-void Cmd_Msg_Callback(const oscar_pi::cmd& msg) {
-  Wheel_Ang_V_T sp;
-  if (0 == msg.stop) {
-    sp.r = msg.r_wheel_sp;
-    sp.l = msg.l_wheel_sp;
-    UpdateWheelAngV(&sp, true);
-  } else {
-    StopMotors();
-  }
-}
-
-#if TUNE
-void Go(void) {
-  Wheel_Ang_V_T sp;
-  sp.r = 15.0f;
-  sp.l = 15.0f;
-  UpdateWheelAngV(&sp, true);
 }
 #endif
