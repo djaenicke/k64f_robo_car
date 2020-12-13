@@ -8,8 +8,8 @@
 /* Common constants */
 #define ROBO_CAR_VERSION     (2)
 #define OPEN_LOOP            (0)
-#define STATE_MSG_RATE       (0.050f)
-#define CYCLE_TIME           (0.025f)
+#define STATE_MSG_RATE_MS    (50)
+#define CYCLE_TIME_S         (0.025f)
 #define TUNE                 (0)
 
 #define ROS_ENABLED          (1)

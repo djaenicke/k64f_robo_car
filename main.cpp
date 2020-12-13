@@ -4,15 +4,15 @@
 #include "io_abstraction.h"
 #include "battery_monitor.h"
 #include "motor_controls.h"
-
 #include "mpu6050.h"
 #include "fxos8700.h"
+#include "hc_sr04.h"
 
 #include <ros.h>
+#include <ros/time_ros.h>
 #include <oscar_pi/state.h>
 #include <oscar_pi/cmd.h>
-
-#define LOOPS_PER_SEC (1.0f / STATE_MSG_RATE)
+#include <sensor_msgs/Range.h>
 
 static Timer t;
 static int t_start;
@@ -23,10 +23,12 @@ static ros::NodeHandle nh;
 #endif
 static oscar_pi::state state_msg;
 static oscar_pi::cmd cmd_msg;
+static sensor_msgs::Range fwd_uss_range_msg;
 
 void Cmd_Msg_Callback(const oscar_pi::cmd& msg);
 
 static ros::Publisher state_msg_pub("robot_state", &state_msg);
+static ros::Publisher range_msg_pub("fwd_uss", &fwd_uss_range_msg);
 static ros::Subscriber<oscar_pi::cmd> state_cmd_sub("robot_cmd", &Cmd_Msg_Callback);
 /* End - ROS objects/variables */
 
@@ -45,14 +47,17 @@ static Thread motor_controls_thread(osPriorityRealtime);
 static mpu6050::MPU6050 imu1(I2C_SDA, I2C_SCL);
 static fxos8700::FXOS8700 imu2(I2C_SDA, I2C_SCL);
 #endif
+static hc_sr04::HC_SR04 fwd_uss(FWD_USS_TRIGGER, FWD_USS_ECHO);
 
-Wheel_Ang_V_T wheel_speed_sp;
-Wheel_Ang_V_T wheel_speed_fb;
-mpu6050::Accel_Data_T mpu_accel_data;
-mpu6050::Gyro_Data_T  mpu_gyro_data;
-fxos8700::Sensor_Data_T fxos_data;
+static Wheel_Ang_V_T wheel_speed_sp;
+static Wheel_Ang_V_T wheel_speed_fb;
+static mpu6050::Accel_Data_T mpu_accel_data;
+static mpu6050::Gyro_Data_T  mpu_gyro_data;
+static fxos8700::Sensor_Data_T fxos_data;
 
+#if ROS_ENABLED
 static void Populate_State_Msg(void);
+#endif
 #if TUNE
 static void Go(void);
 #endif
@@ -80,6 +85,7 @@ int main() {
 #if ROS_ENABLED
   nh.initNode();
   nh.advertise(state_msg_pub);
+  nh.advertise(range_msg_pub);
   nh.subscribe(state_cmd_sub);
 #endif
 
@@ -98,23 +104,40 @@ int main() {
 
   t.start();
 
+  /* Initialize the range message */
+  fwd_uss_range_msg.header.frame_id = "fwd_uss";
+  fwd_uss_range_msg.radiation_type = sensor_msgs::Range::ULTRASOUND;
+  fwd_uss_range_msg.field_of_view = 0.5236;  // 30 degrees = 0.5236 rad
+  fwd_uss_range_msg.min_range = 0.03f;  // m
+  fwd_uss_range_msg.max_range = 4.0f;  // m  
+
   while (true) {
-    t_start = t.read_ms();
+    if ((t.read_ms() - t_start) >= STATE_MSG_RATE_MS) {
+      t_start += STATE_MSG_RATE_MS;
 #if ROS_ENABLED
-    Populate_State_Msg();
-    state_msg_pub.publish(&state_msg);
+      fwd_uss_range_msg.header.stamp = nh.now();
+#endif
+      fwd_uss_range_msg.range = fwd_uss.GetDist2Obj();
+      fwd_uss.Trigger();
+#if ROS_ENABLED
+      range_msg_pub.publish(&fwd_uss_range_msg);
+      fwd_uss_range_msg.header.seq++;
+      Populate_State_Msg();
+      state_msg_pub.publish(&state_msg);
+#endif
+    }
+#if ROS_ENABLED
     nh.spinOnce();
 #endif
-
-    ThisThread::sleep_for((STATE_MSG_RATE * MS_2_S) - (t.read_ms() - t_start));
   }
 }
 
+#if ROS_ENABLED
 void Populate_State_Msg(void) {
     state_msg.timestamp = t.read_us();
     state_msg.vbatt = ReadBatteryVoltage();
 
-    GetWheelAngVSp(&wheel_speed_sp); /* Setpoint */
+    GetWheelAngVSp(&wheel_speed_sp);  /* Setpoint */
     state_msg.l_wheel_sp = wheel_speed_sp.l;
     state_msg.r_wheel_sp = wheel_speed_sp.r;
 
@@ -142,6 +165,7 @@ void Populate_State_Msg(void) {
     state_msg.mpu_gz = mpu_gyro_data.gz;
 #endif
 }
+#endif
 
 void Cmd_Msg_Callback(const oscar_pi::cmd& msg) {
   Wheel_Ang_V_T sp;

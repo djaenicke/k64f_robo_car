@@ -24,4 +24,7 @@
 #define I2C_SCL (PTE24)
 #define I2C_SDA (PTE25)
 
+#define FWD_USS_TRIGGER (PTB3)
+#define FWD_USS_ECHO (PTD0)
+
 #endif  // IO_ABSTRACTION_H_
