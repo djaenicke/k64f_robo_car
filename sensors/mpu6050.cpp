@@ -16,7 +16,7 @@ typedef struct {
   static Serial debug_out(USBTX, USBRX, 115200);
 #endif
 
-static const char mpu6050_addr = 0x68<<1;
+static const char mpu6050_addr = 0x68 << 1;
 static const float pi = 3.14159265359f;
 static const float g  = 9.81;
 
@@ -32,16 +32,16 @@ MPU6050::MPU6050(PinName sda, PinName scl, Ascale_T ascale, \
 
   switch (ascale) {
     case AFS_2G:
-      scalings_.accel = 2.0f/32768.0f*g;
+      scalings_.accel = 2.0f / 32768.0f * g;
       break;
     case AFS_4G:
-      scalings_.accel = 4.0f/32768.0f*g;
+      scalings_.accel = 4.0f / 32768.0f * g;
       break;
     case AFS_8G:
-      scalings_.accel = 8.0f/32768.0f*g;
+      scalings_.accel = 8.0f / 32768.0f * g;
       break;
     case AFS_16G:
-      scalings_.accel = 16.0f/32768.0f*g;
+      scalings_.accel = 16.0f / 32768.0f * g;
       break;
     default:
       MBED_ASSERT(false);
@@ -50,16 +50,16 @@ MPU6050::MPU6050(PinName sda, PinName scl, Ascale_T ascale, \
 
   switch (gscale) {
     case GFS_250DPS:
-      scalings_.gyro = 250.0/32768.0*(pi/180);
+      scalings_.gyro = 250.0 / 32768.0 * (pi / 180);
       break;
     case GFS_500DPS:
-      scalings_.gyro = 500.0/32768.0*(pi/180);
+      scalings_.gyro = 500.0 / 32768.0 * (pi / 180);
       break;
     case GFS_1000DPS:
-      scalings_.gyro = 1000.0/32768.0*(pi/180);
+      scalings_.gyro = 1000.0 / 32768.0 * (pi / 180);
       break;
     case GFS_2000DPS:
-      scalings_.gyro = 2000.0/32768.0*(pi/180);
+      scalings_.gyro = 2000.0 / 32768.0 * (pi / 180);
       break;
     default:
       MBED_ASSERT(false);
@@ -68,8 +68,8 @@ MPU6050::MPU6050(PinName sda, PinName scl, Ascale_T ascale, \
 }
 
 void MPU6050::Delay(uint16_t delay_ms) {
-  float start_ms = t_.read_ms();
-  while ((t_.read_ms()-start_ms) < delay_ms) {}
+  const float start_ms = t_.read_ms();
+  while ((t_.read_ms() - start_ms) < delay_ms);
 }
 
 void MPU6050::WriteByte(uint8_t sub_addr, uint8_t data) {
@@ -158,7 +158,7 @@ bool MPU6050::ReadAccelData(Accel_Data_T * destination) {
 }
 
 void MPU6050::Reset(void) {
-  // Reset the device */
+  // Reset the device
   WriteByte(PWR_MGMT_1, 0x80);
   Delay(100);
 }
@@ -186,15 +186,17 @@ void MPU6050::Init(void) {
 
   // Configure Gyro and Accelerometer
   // Disable FSYNC
-  // Set accelerometer and gyro bandwidth to 44 and 42 Hz, respectively;
-  // DLPF_CFG = bits 2:0 = 010; this sets the sample rate at 1 kHz for both
-  // Maximum Delay time is 4.9 ms corresponding to just over 200 Hz sample rate
-  WriteByte(CONFIG, 0x03);
+  // Set accelerometer and gyro bandwidth to 260 and 256 Hz, respectively
+  // Accelerometer sample rate = 1kHz, delay = 0ms, no LPF
+  // Gyroscope sample rate = 8kHz, delay = 0.98ms, no LPF
+  // DLPF_CFG = bits 2:0 = 000
+  WriteByte(CONFIG, 0x00);
   c = ReadByte(CONFIG);
 
-  // Set sample rate = gyroscope output rate/(1 + SMPLRT_DIV)
-  // Use a 200 Hz rate; the same rate set in CONFIG above
-  WriteByte(SMPLRT_DIV, 0x04);
+  // Set sample rate = gyroscope output rate / (1 + SMPLRT_DIV)
+  // Use a 8000 Hz rate; the same rate set in CONFIG above
+  // Accelerometer sample rate is still 1kHz
+  WriteByte(SMPLRT_DIV, 0);
 
   // Set gyroscope full scale range
   // Range selects FS_SEL and AFS_SEL are 0 - 3,
@@ -202,13 +204,13 @@ void MPU6050::Init(void) {
   c = ReadByte(GYRO_CONFIG);
   WriteByte(GYRO_CONFIG, c & ~0xE0);  // Clear self-test bits [7:5]
   WriteByte(GYRO_CONFIG, c & ~0x18);  // Clear AFS bits [4:3]
-  WriteByte(GYRO_CONFIG, c | g_scale_ << 3);  // Set gyro scale
+  WriteByte(GYRO_CONFIG, c | (g_scale_ << 3));  // Set gyro scale
 
   // Set accelerometer configuration
   c = ReadByte(ACCEL_CONFIG);
   WriteByte(ACCEL_CONFIG, c & ~0xE0);  // Clear self-test bits [7:5]
   WriteByte(ACCEL_CONFIG, c & ~0x18);  // Clear AFS bits [4:3]
-  WriteByte(ACCEL_CONFIG, c | a_scale_ << 3);  // Set the accelerometer scale
+  WriteByte(ACCEL_CONFIG, c | (a_scale_ << 3));  // Set the accelerometer scale
 
   // Configure Interrupts and Bypass Enable
   WriteByte(INT_PIN_CFG, 0x22);
@@ -216,7 +218,7 @@ void MPU6050::Init(void) {
   Delay(50);
 
   // Wait for data to be available
-  while (!(ReadByte(INT_STATUS) & 0x01)) {}
+  while (!(ReadByte(INT_STATUS) & 0x01));
 
   t_.stop();
   init_complete_ = true;
@@ -228,7 +230,7 @@ bool MPU6050::TestConnection(void) {
 
   actual_addr = ReadByte(WHO_AM_I_MPU6050);
 
-  if (actual_addr == mpu6050_addr>>1) {
+  if (actual_addr == mpu6050_addr >> 1) {
     test_passed = true;
   }
 
@@ -270,8 +272,8 @@ void MPU6050::Calibrate(void) {
   // Set accelerometer full-scale to 2 g, maximum sensitivity
   WriteByte(ACCEL_CONFIG, 0x00);
 
-  uint16_t  gyrosensitivity  = 131;   // = 131 LSB/degrees/sec
-  uint16_t  accelsensitivity = 16384;  // = 16384 LSB/g
+  uint16_t gyrosensitivity  = 131;   // = 131 LSB/degrees/sec
+  uint16_t accelsensitivity = 16384;  // = 16384 LSB/g
 
   // Configure FIFO to capture accelerometer and gyro data for bias calculation
   // Enable FIFO

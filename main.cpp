@@ -44,8 +44,8 @@ static InterruptIn stop_button(SW3);
 static Thread motor_controls_thread(osPriorityRealtime);
 
 #if IMUS_ENABLED
-static mpu6050::MPU6050 imu1(I2C_SDA, I2C_SCL);
-static fxos8700::FXOS8700 imu2(I2C_SDA, I2C_SCL);
+static mpu6050::MPU6050 imu1(I2C_SDA, I2C_SCL, mpu6050::AFS_2G, mpu6050::GFS_250DPS);
+static fxos8700::FXOS8700 imu2(I2C_SDA, I2C_SCL, fxos8700::FXOS_2G);
 #endif
 static hc_sr04::HC_SR04 fwd_uss(FWD_USS_TRIGGER, FWD_USS_ECHO);
 
