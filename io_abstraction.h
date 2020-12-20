@@ -17,9 +17,13 @@
 #define L_ENCODER_A (PTA1)
 #define L_ENCODER_B (PTC3)
 
+// Arduino RX/TX pins
+#define DEBUG_RX (PTC16)
+#define DEBUG_TX (PTC17)
+
 #define ROS_RX (USBRX)
 #define ROS_TX (USBTX)
-#define ROS_SERIAL_BAUD 57600
+#define ROS_SERIAL_BAUD 500000
 
 #define I2C_SCL (PTE24)
 #define I2C_SDA (PTE25)

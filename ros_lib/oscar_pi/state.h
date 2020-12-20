@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "ros/msg.h"
+#include "std_msgs/Header.h"
 
 namespace oscar_pi
 {
@@ -12,8 +13,8 @@ namespace oscar_pi
   class state : public ros::Msg
   {
     public:
-      typedef int32_t _timestamp_type;
-      _timestamp_type timestamp;
+      typedef std_msgs::Header _header_type;
+      _header_type header;
       typedef float _vbatt_type;
       _vbatt_type vbatt;
       typedef float _r_wheel_sp_type;
@@ -50,7 +51,7 @@ namespace oscar_pi
       _fxos_mz_type fxos_mz;
 
     state():
-      timestamp(0),
+      header(),
       vbatt(0),
       r_wheel_sp(0),
       l_wheel_sp(0),
@@ -74,16 +75,7 @@ namespace oscar_pi
     virtual int serialize(unsigned char *outbuffer) const override
     {
       int offset = 0;
-      union {
-        int32_t real;
-        uint32_t base;
-      } u_timestamp;
-      u_timestamp.real = this->timestamp;
-      *(outbuffer + offset + 0) = (u_timestamp.base >> (8 * 0)) & 0xFF;
-      *(outbuffer + offset + 1) = (u_timestamp.base >> (8 * 1)) & 0xFF;
-      *(outbuffer + offset + 2) = (u_timestamp.base >> (8 * 2)) & 0xFF;
-      *(outbuffer + offset + 3) = (u_timestamp.base >> (8 * 3)) & 0xFF;
-      offset += sizeof(this->timestamp);
+      offset += this->header.serialize(outbuffer + offset);
       union {
         float real;
         uint32_t base;
@@ -260,17 +252,7 @@ namespace oscar_pi
     virtual int deserialize(unsigned char *inbuffer) override
     {
       int offset = 0;
-      union {
-        int32_t real;
-        uint32_t base;
-      } u_timestamp;
-      u_timestamp.base = 0;
-      u_timestamp.base |= ((uint32_t) (*(inbuffer + offset + 0))) << (8 * 0);
-      u_timestamp.base |= ((uint32_t) (*(inbuffer + offset + 1))) << (8 * 1);
-      u_timestamp.base |= ((uint32_t) (*(inbuffer + offset + 2))) << (8 * 2);
-      u_timestamp.base |= ((uint32_t) (*(inbuffer + offset + 3))) << (8 * 3);
-      this->timestamp = u_timestamp.real;
-      offset += sizeof(this->timestamp);
+      offset += this->header.deserialize(inbuffer + offset);
       union {
         float real;
         uint32_t base;
@@ -462,7 +444,7 @@ namespace oscar_pi
     }
 
     virtual const char * getType() override { return "oscar_pi/state"; };
-    virtual const char * getMD5() override { return "597e0de29e8f82a4967c15e4eaaef45c"; };
+    virtual const char * getMD5() override { return "48af4300d58bd0ac1c5582c7bbeb2457"; };
 
   };
 

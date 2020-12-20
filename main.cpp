@@ -14,32 +14,21 @@
 #include <oscar_pi/cmd.h>
 #include <sensor_msgs/Range.h>
 
-static Timer t;
-static int t_start;
-
 /* ROS objects/variables */
 #if ROS_ENABLED
 static ros::NodeHandle nh;
 #endif
 static oscar_pi::state state_msg;
-static oscar_pi::cmd cmd_msg;
 static sensor_msgs::Range fwd_uss_range_msg;
-
-void Cmd_Msg_Callback(const oscar_pi::cmd& msg);
 
 static ros::Publisher state_msg_pub("robot_state", &state_msg);
 static ros::Publisher range_msg_pub("fwd_uss", &fwd_uss_range_msg);
-static ros::Subscriber<oscar_pi::cmd> state_cmd_sub("robot_cmd", &Cmd_Msg_Callback);
+static ros::Subscriber<oscar_pi::cmd> cmd_sub("robot_cmd", &UpdateMotorControllerInputs);
 /* End - ROS objects/variables */
 
 static DigitalOut red_led(LED_RED);
 static DigitalOut green_led(LED_GREEN);
 static DigitalOut blue_led(LED_BLUE);
-
-#if TUNE
-static InterruptIn go_button(SW2);
-static InterruptIn stop_button(SW3);
-#endif
 
 static Thread motor_controls_thread(osPriorityRealtime);
 
@@ -57,9 +46,6 @@ static fxos8700::Sensor_Data_T fxos_data;
 
 #if ROS_ENABLED
 static void Populate_State_Msg(void);
-#endif
-#if TUNE
-static void Go(void);
 #endif
 
 // main() runs in its own thread in the OS
@@ -86,7 +72,7 @@ int main() {
   nh.initNode();
   nh.advertise(state_msg_pub);
   nh.advertise(range_msg_pub);
-  nh.subscribe(state_cmd_sub);
+  nh.subscribe(cmd_sub);
 #endif
 
   /* Blue LED means init was successful */
@@ -94,47 +80,39 @@ int main() {
   green_led.write(1);
   blue_led.write(0);
 
-#if TUNE
-  go_button.rise(&Go);
-  stop_button.rise(&StopMotors);
-#endif
-
-  /* Start the threads */
-  motor_controls_thread.start(RunMotorControls);
-
-  t.start();
-
   /* Initialize the range message */
   fwd_uss_range_msg.header.frame_id = "fwd_uss";
   fwd_uss_range_msg.radiation_type = sensor_msgs::Range::ULTRASOUND;
   fwd_uss_range_msg.field_of_view = 0.5236;  // 30 degrees = 0.5236 rad
   fwd_uss_range_msg.min_range = 0.03f;  // m
-  fwd_uss_range_msg.max_range = 4.0f;  // m  
+  fwd_uss_range_msg.max_range = 4.0f;  // m
 
-  while (true) {
-    if ((t.read_ms() - t_start) >= STATE_MSG_RATE_MS) {
-      t_start += STATE_MSG_RATE_MS;
+  /* Start the threads */
+  motor_controls_thread.start(RunMotorControls);
+
+  while (1) {
 #if ROS_ENABLED
-      fwd_uss_range_msg.header.stamp = nh.now();
+    fwd_uss_range_msg.header.stamp = nh.now();
 #endif
-      fwd_uss_range_msg.range = fwd_uss.GetDist2Obj();
-      fwd_uss.Trigger();
+    fwd_uss_range_msg.range = fwd_uss.GetDist2Obj();
+    fwd_uss.Trigger();
+    Populate_State_Msg();
 #if ROS_ENABLED
-      range_msg_pub.publish(&fwd_uss_range_msg);
-      fwd_uss_range_msg.header.seq++;
-      Populate_State_Msg();
-      state_msg_pub.publish(&state_msg);
+    range_msg_pub.publish(&fwd_uss_range_msg);
+    fwd_uss_range_msg.header.seq++;
+    state_msg_pub.publish(&state_msg);
+    state_msg.header.seq++;
 #endif
-    }
 #if ROS_ENABLED
     nh.spinOnce();
 #endif
+    ThisThread::sleep_for(STATE_MSG_RATE_MS);
   }
 }
 
 #if ROS_ENABLED
 void Populate_State_Msg(void) {
-    state_msg.timestamp = t.read_us();
+    state_msg.header.stamp = nh.now();
     state_msg.vbatt = ReadBatteryVoltage();
 
     GetWheelAngVSp(&wheel_speed_sp);  /* Setpoint */
@@ -164,25 +142,5 @@ void Populate_State_Msg(void) {
     state_msg.mpu_gy = mpu_gyro_data.gy;
     state_msg.mpu_gz = mpu_gyro_data.gz;
 #endif
-}
-#endif
-
-void Cmd_Msg_Callback(const oscar_pi::cmd& msg) {
-  Wheel_Ang_V_T sp;
-  if (0 == msg.stop) {
-    sp.r = msg.r_wheel_sp;
-    sp.l = msg.l_wheel_sp;
-    UpdateWheelAngV(&sp, true);
-  } else {
-    StopMotors();
-  }
-}
-
-#if TUNE
-void Go(void) {
-  Wheel_Ang_V_T sp;
-  sp.r = 15.0f;
-  sp.l = 15.0f;
-  UpdateWheelAngV(&sp, true);
 }
 #endif
