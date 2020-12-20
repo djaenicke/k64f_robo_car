@@ -14,16 +14,12 @@
 #include <oscar_pi/cmd.h>
 #include <sensor_msgs/Range.h>
 
-static Timer t;
-static int t_start;
-
 /* ROS objects/variables */
 #if ROS_ENABLED
 static ros::NodeHandle nh;
 #endif
 static oscar_pi::state state_msg;
 static sensor_msgs::Range fwd_uss_range_msg;
-
 
 static ros::Publisher state_msg_pub("robot_state", &state_msg);
 static ros::Publisher range_msg_pub("fwd_uss", &fwd_uss_range_msg);
@@ -84,37 +80,33 @@ int main() {
   green_led.write(1);
   blue_led.write(0);
 
-  /* Start the threads */
-  motor_controls_thread.start(RunMotorControls);
-
-  t.start();
-
   /* Initialize the range message */
   fwd_uss_range_msg.header.frame_id = "fwd_uss";
   fwd_uss_range_msg.radiation_type = sensor_msgs::Range::ULTRASOUND;
   fwd_uss_range_msg.field_of_view = 0.5236;  // 30 degrees = 0.5236 rad
   fwd_uss_range_msg.min_range = 0.03f;  // m
-  fwd_uss_range_msg.max_range = 4.0f;  // m  
+  fwd_uss_range_msg.max_range = 4.0f;  // m
 
-  while (true) {
-    if ((t.read_ms() - t_start) >= STATE_MSG_RATE_MS) {
-      t_start += STATE_MSG_RATE_MS;
+  /* Start the threads */
+  motor_controls_thread.start(RunMotorControls);
+
+  while (1) {
 #if ROS_ENABLED
-      fwd_uss_range_msg.header.stamp = nh.now();
+    fwd_uss_range_msg.header.stamp = nh.now();
 #endif
-      fwd_uss_range_msg.range = fwd_uss.GetDist2Obj();
-      fwd_uss.Trigger();
+    fwd_uss_range_msg.range = fwd_uss.GetDist2Obj();
+    fwd_uss.Trigger();
+    Populate_State_Msg();
 #if ROS_ENABLED
-      range_msg_pub.publish(&fwd_uss_range_msg);
-      fwd_uss_range_msg.header.seq++;
-      Populate_State_Msg();
-      state_msg_pub.publish(&state_msg);
-      state_msg.header.seq++;
+    range_msg_pub.publish(&fwd_uss_range_msg);
+    fwd_uss_range_msg.header.seq++;
+    state_msg_pub.publish(&state_msg);
+    state_msg.header.seq++;
 #endif
-    }
 #if ROS_ENABLED
     nh.spinOnce();
 #endif
+    ThisThread::sleep_for(STATE_MSG_RATE_MS);
   }
 }
 

@@ -8,7 +8,8 @@
 // Common constants
 #define OPEN_LOOP            (0)
 #define STATE_MSG_RATE_MS    (50)
-#define CYCLE_TIME_S         (0.025f)
+#define CYCLE_TIME_MS        (25)
+#define CYCLE_TIME_S         (CYCLE_TIME_MS * 0.001f)
 
 #define ROS_ENABLED          (1)
 #define IMUS_ENABLED         (1)
