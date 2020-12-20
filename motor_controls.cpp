@@ -24,7 +24,6 @@ typedef struct {
   float    sp_rad_s;   /* Desired angular velocity (rad/s) */
   float    fb_rad_s;   /* Actual angular velocity (rad/s)  */
   float    dt;         /* Elapsed time between loops (s)   */
-  float    e_rad_s;    /* Velocity error (rad/s) */
   float    sp_volts;   /* DC motor setpoint voltage  */
   float    fb_volts;   /* DC motor feedback voltage  */
   float    u_volts;    /* DC motor actuation voltage */
@@ -125,21 +124,18 @@ void RunMotorControls(void) {
         Run_Controller(&l_motor_ctrl_data);
 
         /* Are we slowing down to stop? */
-        if (awaiting_stop && (r_motor_ctrl_data.e_rad_s < STOP_THRESHOLD) \
-            && (l_motor_ctrl_data.e_rad_s < STOP_THRESHOLD)) {
-        motor_driver.Stop(R_MOTOR);
-        motor_driver.Stop(L_MOTOR);
-
-        ctrl_active = false;
-        awaiting_stop = false;
+        if (awaiting_stop && (fabs(r_motor_ctrl_data.fb_rad_s) < STOP_THRESHOLD) \
+            && (fabs(l_motor_ctrl_data.fb_rad_s) < STOP_THRESHOLD)) {
+          motor_driver.Freewheel();
+          ctrl_active = false;
+          awaiting_stop = false;
+        } else {
+          motor_driver.SetDC(R_MOTOR, r_motor_ctrl_data.u_percent);
+          motor_driver.SetDC(L_MOTOR, l_motor_ctrl_data.u_percent);
         }
       } else {
-          r_motor_ctrl_data.u_percent = 0;
-          l_motor_ctrl_data.u_percent = 0;
+        motor_driver.Freewheel();
       }
-
-      motor_driver.SetDC(R_MOTOR, r_motor_ctrl_data.u_percent);
-      motor_driver.SetDC(L_MOTOR, l_motor_ctrl_data.u_percent);
 
       ThisThread::sleep_for(CYCLE_TIME_MS);
     }
@@ -160,9 +156,6 @@ static void Run_Controller(Ctrl_Data_T * ctrl_data) {
 
   /* Compute the voltage feedback  */
   ctrl_data->fb_volts = ctrl_data->fb_rad_s * ctrl_data->ke;
-
-  /* Compute the velocity error */
-  ctrl_data->e_rad_s = ctrl_data->sp_rad_s - ctrl_data->fb_rad_s;
 
 #if 0 == OPEN_LOOP
   /* Run the PID controller */
