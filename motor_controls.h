@@ -3,16 +3,16 @@
 
 #include <oscar_pi/cmd.h>
 
-typedef struct {
+typedef struct
+{
   float r;
   float l;
-} Wheel_Ang_V_T;
+} WheelAngV;
 
-extern void InitMotorControls(void);
-extern void RunMotorControls(void);
-extern void UpdateMotorControllerInputs(const oscar_pi::cmd& cmd_msg);
-extern void StopMotors(void);
-extern void GetWheelAngVSp(Wheel_Ang_V_T *dest);
-extern void GetWheelAngV(Wheel_Ang_V_T *dest);
+extern void initMotorControls(void);
+extern void runMotorControls(void);
+extern void updateMotorControllerInputs(const oscar_pi::cmd& cmd_msg);
+extern void getWheelAngVSp(WheelAngV* dest);
+extern void getWheelAngV(WheelAngV* dest);
 
 #endif /* MOTOR_CONTROLS_H_ */

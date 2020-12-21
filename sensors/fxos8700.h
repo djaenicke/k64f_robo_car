@@ -3,19 +3,22 @@
 
 #include "mbed.h"
 
-namespace fxos8700 {
-
-typedef struct {
+namespace fxos8700
+{
+typedef struct
+{
   float accel[3];
   float magno[3];
-} Meas_Biases_T;
+} MeasBias;
 
-typedef struct {
+typedef struct
+{
   float accel;
   float magno;
-} Meas_Scalings_T;
+} MeasScaling;
 
-typedef struct {
+typedef struct
+{
   bool data_valid;
   float ax;
   float ay;
@@ -23,70 +26,76 @@ typedef struct {
   float mx;
   float my;
   float mz;
-} Sensor_Data_T;
+} SensorData;
 
-typedef enum {
+typedef enum
+{
   FXOS_2G = 0,
   FXOS_4G,
   FXOS_8G,
-} Ascale_T;
+} Ascale;
 
-typedef enum {
+typedef enum
+{
   FXOS_STANDBY = 0x00,
-  FXOS_ACTIVE  = 0x01
-} Mode_T;
+  FXOS_ACTIVE = 0x01
+} Mode;
 
-typedef union {
-  struct {
-  uint8_t active:1;
-  uint8_t f_read:1;
-  uint8_t lnoise:1;
-  uint8_t odr:3;
-  uint8_t aslp_rate:2;
+typedef union
+{
+  struct
+  {
+    uint8_t active : 1;
+    uint8_t f_read : 1;
+    uint8_t lnoise : 1;
+    uint8_t odr : 3;
+    uint8_t aslp_rate : 2;
   };
   uint8_t byte;
-} CTRL_1_T;
+} Ctrl1;
 
-typedef enum {
-  FXOS_400HZ    = 0,
-  FXOS_200HZ    = 1,
-  FXOS_100HZ    = 2,
-  FXOS_50HZ     = 3,
-  FXOS_25HZ     = 4,
-  FXOS_6p25HZ   = 5,
-  FXOS_3p125HZ  = 6,
+typedef enum
+{
+  FXOS_400HZ = 0,
+  FXOS_200HZ = 1,
+  FXOS_100HZ = 2,
+  FXOS_50HZ = 3,
+  FXOS_25HZ = 4,
+  FXOS_6p25HZ = 5,
+  FXOS_3p125HZ = 6,
   FXOS_0p7813HZ = 7,
-} ODR_Hybrid_T;
+} OdrHybrid;
 
-class FXOS8700 {
+class FXOS8700
+{
  private:
   bool init_complete_;
-  Ascale_T a_scale_;
-  Meas_Biases_T biases_;
-  Meas_Scalings_T scalings_;
+  Ascale a_scale_;
+  MeasBias biases_;
+  MeasScaling scalings_;
   uint16_t accel_sensitivity_;
 
   I2C i2c_;
   Timer t_;
 
-  void Delay(uint16_t delay_ms);
-  void WriteByte(uint8_t sub_addr, uint8_t data);
-  uint8_t ReadByte(uint8_t sub_addr);
-  int ReadBytes(uint8_t sub_addr, uint8_t cnt, uint8_t * buffer);
+  void delay(uint16_t delay_ms);
+  void writeByte(uint8_t sub_addr, uint8_t data);
+  uint8_t readByte(uint8_t sub_addr);
+  int readBytes(uint8_t sub_addr, uint8_t cnt, uint8_t* buffer);
 
-  bool TestConnection(void);
-  void SetMode(Mode_T mode);
-  void BasicSetup(void);
-  void SetAscale(void);
-  void SetODR(ODR_Hybrid_T odr);
-  void EnableReducedNoise(void);
-  void Calibrate(void);
-  CTRL_1_T ReadCTRLREG1(void);
+  bool testConnection(void);
+  void setMode(Mode mode);
+  void basicSetup(void);
+  void setAscale(void);
+  void setODR(OdrHybrid odr);
+  void enableReducedNoise(void);
+  void calibrate(void);
+  Ctrl1 readCtrlReg1(void);
 
  public:
-  FXOS8700(PinName sda, PinName scl, Ascale_T ascale = FXOS_2G);
-  void Init(void);
-  bool ReadData(Sensor_Data_T * destination);
+  FXOS8700(PinName sda, PinName scl, Ascale ascale = FXOS_2G);
+  void init(void);
+  bool readData(SensorData* destination);
 };
 
 }  // namespace fxos8700

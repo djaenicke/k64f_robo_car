@@ -68,7 +68,7 @@
 #define F_MODE_DISABLED 0x00
 #define F_MODE_CIRCULAR (F_MODE0_MASK)
 #define F_MODE_FILL (F_MODE1_MASK)
-#define F_MODE_TRIGGER (F_MODE1_MASK + F_MODE0_MASK)
+#define F_ModeRIGGER (F_MODE1_MASK + F_MODE0_MASK)
 
 /*
  *  TRIG_CFG FIFO Trigger Configuration Register
