@@ -27,6 +27,10 @@ class HC_SR04
   void echoFallingEdgeISR(void);
 
  public:
+  constexpr static const float MIN_RANGE_M = 0.03;
+  constexpr static const float MAX_RANGE_M = 4.0;
+  constexpr static const float FOV_RAD = 0.5236;  // 30 degrees = 0.5236 rad
+
   HC_SR04(PinName trigger_pin, PinName echo_pin);
   void trigger(void);
   float getDist2Obj(void);

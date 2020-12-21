@@ -1,6 +1,7 @@
 #include "motor_controls.h"
 
 #include <cmath>
+#include <cstdint>
 
 #include "battery_monitor.h"
 #include "cmd.h"
@@ -50,16 +51,18 @@ static Timer t;
 static us_timestamp_t last_t_us = 0;
 static float dt_s = 0;
 static float pulses_2_rpm = 0;
-static float meas_vbatt = 0.0f;
-static float max_vbatt = 0.0f;
-static float wheel_speed_filt_alpha = 1.0f;
+static float meas_vbatt = 0.0F;
+static float max_vbatt = 0.0F;
+static float wheel_speed_filt_alpha = 1.0F;
 static CtrlData r_motor_ctrl_data;
 static CtrlData l_motor_ctrl_data;
 static bool ctrl_active = false;
 static bool awaiting_stop = false;
 
-static const float MIN_V = 0.0f;
-static const float PULSES_2_REVS = (1.0f / PULSES_PER_REV) * 2 * 3.14159;
+static const uint8_t MAX_PERCENTAGE = 100;
+static const float MIN_V = 0.0F;
+static const float PULSES_2_REVS = (1.0F / PULSES_PER_REV) * 2 * 3.14159;
+static const float TB6612_PWM_PERIOD_S = 0.0001;
 
 // Static function declarations
 static void runController(CtrlData* ctrl_data);
@@ -69,7 +72,7 @@ void initMotorControls(void)
   (void)memset(&r_motor_ctrl_data, 0, sizeof(r_motor_ctrl_data));
   (void)memset(&l_motor_ctrl_data, 0, sizeof(l_motor_ctrl_data));
 
-  motor_driver.setPWMPeriod(0.0001);
+  motor_driver.setPWMPeriod(TB6612_PWM_PERIOD_S);
 
   r_motor_ctrl_data.ke = R_Ke;
   l_motor_ctrl_data.ke = L_Ke;
@@ -85,7 +88,7 @@ void initMotorControls(void)
 
 void runMotorControls(void)
 {
-  while (1)
+  while (true)
   {
     // Determine the max actuation voltage based on the vbatt measurement
     meas_vbatt = lpFilter(readBatteryVoltage(), meas_vbatt, VBATT_FILT_ALPHA);
@@ -104,7 +107,7 @@ void runMotorControls(void)
 
     if (0 != last_t_us)
     {
-      r_motor_ctrl_data.dt_s = (current_t_us - last_t_us) * US_2_S;
+      r_motor_ctrl_data.dt_s = static_cast<uint32_t>(current_t_us - last_t_us) * US_2_S;
       l_motor_ctrl_data.dt_s = r_motor_ctrl_data.dt_s;
     }
     else
@@ -182,7 +185,7 @@ static void runController(CtrlData* ctrl_data)
 #endif  // OPEN_LOOP
 
   // Convert the actuation voltage to a percent duty cycle
-  ctrl_data->u_percent = (uint8_t)(fabs(ctrl_data->u_volts) * (100 / meas_vbatt));
+  ctrl_data->u_percent = static_cast<uint8_t>(fabs(ctrl_data->u_volts) * (MAX_PERCENTAGE / meas_vbatt));
 
   // Determine direction
   const tb6612::Direction dir = signbit(ctrl_data->u_volts) ? tb6612::REVERSE : tb6612::FORWARD;
@@ -223,8 +226,8 @@ void getWheelAngV(WheelAngV* dest)
 
 void updateMotorControllerInputs(const oscar_pi::cmd& cmd_msg)
 {
-  pid::Gains r_gains = { 0.0f };
-  pid::Gains l_gains = { 0.0f };
+  pid::Gains r_gains = { 0.0F };
+  pid::Gains l_gains = { 0.0F };
 
   if (0 == cmd_msg.stop)
   {
@@ -233,8 +236,8 @@ void updateMotorControllerInputs(const oscar_pi::cmd& cmd_msg)
   }
   else
   {
-    r_motor_ctrl_data.sp_rad_s = 0.0f;
-    l_motor_ctrl_data.sp_rad_s = 0.0f;
+    r_motor_ctrl_data.sp_rad_s = 0.0F;
+    l_motor_ctrl_data.sp_rad_s = 0.0F;
     awaiting_stop = true;
   }
 

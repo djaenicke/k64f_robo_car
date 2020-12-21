@@ -1,7 +1,0 @@
-{
-  "editor.tabSize": 2,
-  "editor.detectIndentation": false,
-  "C_Cpp.clang_format_fallbackStyle": "Google",
-  "search.useIgnoreFiles": false,
-  "cmake.configureOnOpen": false
-}

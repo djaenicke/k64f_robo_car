@@ -37,6 +37,8 @@ static fxos8700::SensorData fxos_data;
 static WheelAngV wheel_speed_sp;
 static WheelAngV wheel_speed_fb;
 
+static const uint32_t IMU_CALIBRATION_DELAY_MS = 2000;
+
 // Static function declarations
 static void populateStateMsg(void);
 
@@ -51,7 +53,7 @@ int main()
 
   // Wait 2 seconds before calibrating the IMUs so
   // the user doesn't affect the calibration process by touching the robot
-  ThisThread::sleep_for(2000);
+  ThisThread::sleep_for(IMU_CALIBRATION_DELAY_MS);
 
   imu1.init();
   imu2.init();
@@ -71,14 +73,14 @@ int main()
   // Initialize the range message
   fwd_uss_range_msg.header.frame_id = "fwd_uss";
   fwd_uss_range_msg.radiation_type = sensor_msgs::Range::ULTRASOUND;
-  fwd_uss_range_msg.field_of_view = 0.5236;  // 30 degrees = 0.5236 rad
-  fwd_uss_range_msg.min_range = 0.03f;       // m
-  fwd_uss_range_msg.max_range = 4.0f;        // m
+  fwd_uss_range_msg.field_of_view = hc_sr04::HC_SR04::FOV_RAD;
+  fwd_uss_range_msg.min_range = hc_sr04::HC_SR04::MIN_RANGE_M;
+  fwd_uss_range_msg.max_range = hc_sr04::HC_SR04::MAX_RANGE_M;
 
   // Start the motor controls thread
   motor_controls_thread.start(runMotorControls);
 
-  while (1)
+  while (true)
   {
     fwd_uss_range_msg.range = fwd_uss.getDist2Obj();
     fwd_uss.trigger();
@@ -112,7 +114,7 @@ void populateStateMsg(void)
   state_msg.r_wheel_fb = wheel_speed_fb.r;
 
   imu2.readData(&fxos_data);
-  state_msg.fxos_ax = -1.0f * fxos_data.ay;
+  state_msg.fxos_ax = -1.0F * fxos_data.ay;
   state_msg.fxos_ay = fxos_data.ax;
   state_msg.fxos_az = fxos_data.az;
   state_msg.fxos_mx = fxos_data.mx;
@@ -120,8 +122,8 @@ void populateStateMsg(void)
   state_msg.fxos_mz = fxos_data.mz;
 
   imu1.readAccelData(&mpu_accel_data);
-  state_msg.mpu_ax = -1.0f * mpu_accel_data.ax;
-  state_msg.mpu_ay = -1.0f * mpu_accel_data.ay;
+  state_msg.mpu_ax = -1.0F * mpu_accel_data.ax;
+  state_msg.mpu_ay = -1.0F * mpu_accel_data.ay;
   state_msg.mpu_az = mpu_accel_data.az;
 
   imu1.readGyroData(&mpu_gyro_data);
