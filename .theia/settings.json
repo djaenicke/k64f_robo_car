@@ -1,6 +1,0 @@
-{
-    "cpp.clangTidy": true,
-    "cpp.clangTidyChecks": "clang-analyzer-*, google-*, performance-*, readability-*, bugprone-*",
-    "editor.detectIndentation": false,
-    "editor.tabSize": 2
-}
