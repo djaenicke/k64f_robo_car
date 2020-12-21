@@ -12,6 +12,7 @@
 #include "mbed.h"
 #include "motor_controls.h"
 #include "mpu6050.h"
+#include "rgb_led.h"
 
 // ROS objects/variables
 static ros::NodeHandle nh;
@@ -21,9 +22,7 @@ static ros::Publisher state_msg_pub("robot_state", &state_msg);
 static ros::Publisher range_msg_pub("fwd_uss", &fwd_uss_range_msg);
 static ros::Subscriber<oscar_pi::cmd> cmd_sub("robot_cmd", &updateMotorControllerInputs);
 
-static DigitalOut red_led(LED_RED);
-static DigitalOut green_led(LED_GREEN);
-static DigitalOut blue_led(LED_BLUE);
+static rgb_led::RgbLed status_indicator(LED_RED, LED_GREEN, LED_BLUE);
 
 static Thread motor_controls_thread(osPriorityRealtime);
 
@@ -38,16 +37,15 @@ static WheelAngV wheel_speed_sp;
 static WheelAngV wheel_speed_fb;
 
 static const uint32_t IMU_CALIBRATION_DELAY_MS = 2000;
+static const float LOW_VOLTAGE_THRESHOLD = 11.0;
 
 // Static function declarations
 static void populateStateMsg(void);
 
 int main()
 {
-  // Green LED means init is in progress
-  red_led.write(1);
-  green_led.write(0);
-  blue_led.write(1);
+  // Yellow means init is in progress
+  status_indicator.setColor(rgb_led::YELLOW);
 
   initMotorControls();
 
@@ -65,10 +63,8 @@ int main()
   nh.subscribe(cmd_sub);
 #endif
 
-  // Blue LED means init was successful
-  red_led.write(1);
-  green_led.write(1);
-  blue_led.write(0);
+  // Green means init was successful
+  status_indicator.setColor(rgb_led::GREEN);
 
   // Initialize the range message
   fwd_uss_range_msg.header.frame_id = "fwd_uss";
@@ -104,6 +100,15 @@ int main()
 void populateStateMsg(void)
 {
   state_msg.vbatt = readBatteryVoltage();
+
+  if (state_msg.vbatt > LOW_VOLTAGE_THRESHOLD)
+  {
+    status_indicator.setColor(rgb_led::GREEN);
+  }
+  else
+  {
+    status_indicator.setColor(rgb_led::YELLOW);
+  }
 
   getWheelAngVSp(&wheel_speed_sp);  // Setpoint
   state_msg.l_wheel_sp = wheel_speed_sp.l;
