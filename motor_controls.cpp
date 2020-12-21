@@ -1,71 +1,74 @@
+#include "motor_controls.h"
+
 #include <cmath>
 
-#include "PinNames.h"
+#include "battery_monitor.h"
 #include "cmd.h"
-#include "mbed.h"
-#include "motor_controls.h"
+#include "config.h"
 #include "io_abstraction.h"
-#include "tb6612.h"
+#include "lp_filter.h"
+#include "mbed.h"
 #include "pid.h"
 #include "quad_encoder.h"
-#include "battery_monitor.h"
-#include "lp_filter.h"
-#include "config.h"
+#include "tb6612.h"
 
-#define TOLERANCE              (0.0f) /* rad/s */
-#define STOP_THRESHOLD         (0.5f) /* rad/s */
-#define VBATT_FILT_ALPHA       (0.4f)
+#define TOLERANCE (0.0f)       // rad/s
+#define STOP_THRESHOLD (0.5f)  // rad/s
+#define VBATT_FILT_ALPHA (0.4f)
 
-typedef struct {
+typedef struct
+{
   tb6612::Motor_Id_T id;
-  pid::PID * pid_ptr;
+  pid::PID* pid_ptr;
   uint32_t cnt;
-  float    ke;         /* DC motor speed constant */
-  float    sp_rad_s;   /* Desired angular velocity (rad/s) */
-  float    fb_rad_s;   /* Actual angular velocity (rad/s)  */
-  float    dt;         /* Elapsed time between loops (s)   */
-  float    sp_volts;   /* DC motor setpoint voltage  */
-  float    fb_volts;   /* DC motor feedback voltage  */
-  float    u_volts;    /* DC motor actuation voltage */
-  uint8_t  u_percent;  /* DC motor actuation voltage as a % of max voltage */
-} Ctrl_Data_T;
+  float ke;           // DC motor speed constant
+  float sp_rad_s;     // Desired angular velocity (rad/s)
+  float fb_rad_s;     // Actual angular velocity (rad/s)
+  float dt;           // Elapsed time between loops (s)
+  float sp_volts;     // DC motor setpoint voltage
+  float fb_volts;     // DC motor feedback voltage
+  float u_volts;      // DC motor actuation voltage
+  uint8_t u_percent;  // DC motor actuation voltage as a % of max voltage
+} CtrlData;
 
-/* Motor driver object */
-static tb6612::TB6612 motor_driver(MOTOR_A_PWM, MOTOR_B_PWM, MOTOR_A_IN1, \
-                                   MOTOR_A_IN2, MOTOR_B_IN1, MOTOR_B_IN2,
+// Motor driver object
+static tb6612::TB6612 motor_driver(MOTOR_A_PWM, MOTOR_B_PWM, MOTOR_A_IN1, MOTOR_A_IN2, MOTOR_B_IN1, MOTOR_B_IN2,
                                    MOTOR_A_POLARITY, MOTOR_B_POLARITY);
 
-/* PID controller objects */
+// PID controller objects
 static pid::PID l_pid(TOLERANCE);
 static pid::PID r_pid(TOLERANCE);
 
-/* Wheel speed quadrature encoder objects */
+// Wheel speed quadrature encoder objects
 static quad_encoder::QuadEncoder r_encoder(R_ENCODER_B, PullNone, R_ENCODER_A, PullNone);
 static quad_encoder::QuadEncoder l_encoder(L_ENCODER_A, PullNone, L_ENCODER_B, PullNone);
 
-/* Variables */
+// Objects
+static Mutex ctrl_data_mutex;
 static Timer t;
+
+// Variables
 static us_timestamp_t last_t_us = 0;
 static float dt = 0;
 static float pulses_2_rpm = 0;
-static Ctrl_Data_T r_motor_ctrl_data;
-static Ctrl_Data_T l_motor_ctrl_data;
-static bool  ctrl_active   = false;
-static bool  awaiting_stop = false;
-static float meas_vbatt    = 0.0f;
-static float max_vbatt     = 0.0f;
+static CtrlData r_motor_ctrl_data;
+static CtrlData l_motor_ctrl_data;
+static bool ctrl_active = false;
+static bool awaiting_stop = false;
+static float meas_vbatt = 0.0f;
+static float max_vbatt = 0.0f;
 static float wheel_speed_filt_alpha = 1.0f;
 
-static const float MIN_V   = 0.0f;
+static const float MIN_V = 0.0f;
 static const float PULSES_2_REVS = (1.0f / PULSES_PER_REV) * 2 * 3.14159;
 
-static Mutex ctrl_data_mutex;
+// Static function declarations
+static void runController(CtrlData* ctrl_data);
 
-static void Run_Controller(Ctrl_Data_T * ctrl_data);
-
-void InitMotorControls(void) {
-  memset(&r_motor_ctrl_data, 0, sizeof(r_motor_ctrl_data));
-  memset(&l_motor_ctrl_data, 0, sizeof(l_motor_ctrl_data));
+void initMotorControls(void)
+{
+  (void)memset(&r_motor_ctrl_data, 0, sizeof(r_motor_ctrl_data));
+  (void)memset(&l_motor_ctrl_data, 0, sizeof(l_motor_ctrl_data));
 
   motor_driver.SetPWMPeriod(0.0001);
 
@@ -81,24 +84,32 @@ void InitMotorControls(void) {
   t.start();
 }
 
-void RunMotorControls(void) {
-  while (1) {
-    /* Determine the max actuation voltage based on the vbatt measurement */
-    meas_vbatt = LpFilter(ReadBatteryVoltage(), meas_vbatt, VBATT_FILT_ALPHA);
+void runMotorControls(void)
+{
+  while (1)
+  {
+    // Determine the max actuation voltage based on the vbatt measurement
+    meas_vbatt = LpFilter(readBatteryVoltage(), meas_vbatt, VBATT_FILT_ALPHA);
 
-    if (meas_vbatt < MAX_MOTOR_VOLTAGE) {
+    if (meas_vbatt < MAX_MOTOR_VOLTAGE)
+    {
       max_vbatt = meas_vbatt - tb6612::vdrop;
-    } else {
+    }
+    else
+    {
       max_vbatt = MAX_MOTOR_VOLTAGE - tb6612::vdrop;
     }
 
     // Compute the dt between executions
     us_timestamp_t current_t_us = t.read_high_resolution_us();
-  
-    if (0 != last_t_us) {
+
+    if (0 != last_t_us)
+    {
       r_motor_ctrl_data.dt = (current_t_us - last_t_us) * 1e-6;
       l_motor_ctrl_data.dt = r_motor_ctrl_data.dt;
-    } else {
+    }
+    else
+    {
       r_motor_ctrl_data.dt = CYCLE_TIME_MS * 1e-3;
       l_motor_ctrl_data.dt = r_motor_ctrl_data.dt;
     }
@@ -106,34 +117,39 @@ void RunMotorControls(void) {
     last_t_us = current_t_us;
 
     pulses_2_rpm = PULSES_2_REVS * (1 / r_motor_ctrl_data.dt);
-    
-    if (ctrl_data_mutex.trylock()) {
-      /* Measure the current wheel speeds via the encoders */
-      r_motor_ctrl_data.fb_rad_s = LpFilter(r_encoder.GetPulses() * pulses_2_rpm, \
-                                            r_motor_ctrl_data.fb_rad_s, \
-                                            wheel_speed_filt_alpha);
 
-      l_motor_ctrl_data.fb_rad_s = LpFilter(l_encoder.GetPulses() * pulses_2_rpm, \
-                                            l_motor_ctrl_data.fb_rad_s, \
-                                            wheel_speed_filt_alpha);
+    if (ctrl_data_mutex.trylock())
+    {
+      // Measure the current wheel speeds via the encoders
+      r_motor_ctrl_data.fb_rad_s =
+          LpFilter(r_encoder.GetPulses() * pulses_2_rpm, r_motor_ctrl_data.fb_rad_s, wheel_speed_filt_alpha);
+
+      l_motor_ctrl_data.fb_rad_s =
+          LpFilter(l_encoder.GetPulses() * pulses_2_rpm, l_motor_ctrl_data.fb_rad_s, wheel_speed_filt_alpha);
 
       ctrl_data_mutex.unlock();
 
-      if (ctrl_active) {
-        Run_Controller(&r_motor_ctrl_data);
-        Run_Controller(&l_motor_ctrl_data);
+      if (ctrl_active)
+      {
+        runController(&r_motor_ctrl_data);
+        runController(&l_motor_ctrl_data);
 
-        /* Are we slowing down to stop? */
-        if (awaiting_stop && (fabs(r_motor_ctrl_data.fb_rad_s) < STOP_THRESHOLD) \
-            && (fabs(l_motor_ctrl_data.fb_rad_s) < STOP_THRESHOLD)) {
+        // Are we slowing down to stop?
+        if (awaiting_stop && (fabs(r_motor_ctrl_data.fb_rad_s) < STOP_THRESHOLD) &&
+            (fabs(l_motor_ctrl_data.fb_rad_s) < STOP_THRESHOLD))
+        {
           motor_driver.Freewheel();
           ctrl_active = false;
           awaiting_stop = false;
-        } else {
+        }
+        else
+        {
           motor_driver.SetDC(R_MOTOR, r_motor_ctrl_data.u_percent);
           motor_driver.SetDC(L_MOTOR, l_motor_ctrl_data.u_percent);
         }
-      } else {
+      }
+      else
+      {
         motor_driver.Freewheel();
       }
 
@@ -146,68 +162,83 @@ void RunMotorControls(void) {
   }
 }
 
-static void Run_Controller(Ctrl_Data_T * ctrl_data) {
+static void runController(CtrlData* ctrl_data)
+{
   tb6612::Direction_T dir = tb6612::UNKNOWN_DIR;
 
   ctrl_data->cnt++;
 
-  /* Compute the voltage set point  */
+  // Compute the voltage set point
   ctrl_data->sp_volts = ctrl_data->sp_rad_s * ctrl_data->ke;
 
-  /* Compute the voltage feedback  */
+  // Compute the voltage feedback
   ctrl_data->fb_volts = ctrl_data->fb_rad_s * ctrl_data->ke;
 
 #if 0 == OPEN_LOOP
-  /* Run the PID controller */
+  // Run the PID controller
   ctrl_data->u_volts = ctrl_data->pid_ptr->Step(ctrl_data->sp_volts, \
                                                 ctrl_data->fb_volts, \
                                                 ctrl_data->dt, \
                                                 max_vbatt, MIN_V);
 #else
-  /* Saturate the set points to be within the actuator voltage range */
+  // Saturate the set points to be within the actuator voltage range
   int8_t sign;
   sign = signbit(ctrl_data->sp_volts) ? -1 : 1;
-  ctrl_data->u_volts = fabs(ctrl_data->sp_volts) < max_vbatt ? \
-                        ctrl_data->sp_volts : sign * max_vbatt;
+  ctrl_data->u_volts = fabs(ctrl_data->sp_volts) < max_vbatt ? ctrl_data->sp_volts : sign * max_vbatt;
 #endif  // OPEN_LOOP
 
-  /* Convert the actuation voltage to a percent duty cycle */
+  // Convert the actuation voltage to a percent duty cycle
   ctrl_data->u_percent = (uint8_t)(fabs(ctrl_data->u_volts) * (100 / meas_vbatt));
 
-  /* Determine direction */
+  // Determine direction
   dir = signbit(ctrl_data->u_volts) ? tb6612::REVERSE : tb6612::FORWARD;
 
-  /* Set the motor direction */
+  // Set the motor direction
   motor_driver.SetDirection(ctrl_data->id, dir);
 }
 
-void GetWheelAngVSp(Wheel_Ang_V_T* dest) {
-    if (dest) {
+void getWheelAngVSp(WheelAngV* dest)
+{
+  if (dest)
+  {
     dest->r = r_motor_ctrl_data.sp_rad_s;
     dest->l = l_motor_ctrl_data.sp_rad_s;
   }
+  else
+  {
+    MBED_ASSERT(false);
+  }
 }
 
-void GetWheelAngV(Wheel_Ang_V_T* dest) {
+void getWheelAngV(WheelAngV* dest)
+{
   ctrl_data_mutex.lock();
 
-  if (dest) {
+  if (dest)
+  {
     dest->r = r_motor_ctrl_data.fb_rad_s;
     dest->l = l_motor_ctrl_data.fb_rad_s;
+  }
+  else
+  {
+    MBED_ASSERT(false);
   }
 
   ctrl_data_mutex.unlock();
 }
 
-void UpdateMotorControllerInputs(const oscar_pi::cmd& cmd_msg) {
-  pid::Gains_T r_gains = { 0.0f };
-  pid::Gains_T l_gains = { 0.0f };
+void updateMotorControllerInputs(const oscar_pi::cmd& cmd_msg)
+{
+  pid::Gains_T r_gains = {0.0f};
+  pid::Gains_T l_gains = {0.0f};
 
-  if (0 == cmd_msg.stop) {
+  if (0 == cmd_msg.stop)
+  {
     r_motor_ctrl_data.sp_rad_s = cmd_msg.r_wheel_sp;
     l_motor_ctrl_data.sp_rad_s = cmd_msg.l_wheel_sp;
   }
-  else {
+  else
+  {
     r_motor_ctrl_data.sp_rad_s = 0.0f;
     l_motor_ctrl_data.sp_rad_s = 0.0f;
     awaiting_stop = true;
