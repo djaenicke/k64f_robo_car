@@ -8,10 +8,10 @@
 // Common constants
 #define STATE_MSG_RATE_MS (50)
 #define CYCLE_TIME_MS (25)
-#define CYCLE_TIME_S (CYCLE_TIME_MS * 0.001f)
 
 #define OPEN_LOOP (0)
 #define ROS_ENABLED (1)
+#define ROS_SERIAL_BAUD 500000
 
 // Battery monitor
 #define R1 (3.30f)   // 3.3k nominal

@@ -23,7 +23,6 @@
 
 #define ROS_RX (USBRX)
 #define ROS_TX (USBTX)
-#define ROS_SERIAL_BAUD 500000
 
 #define I2C_SCL (PTE24)
 #define I2C_SDA (PTE25)

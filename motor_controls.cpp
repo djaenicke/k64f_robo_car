@@ -21,9 +21,9 @@ typedef struct
   tb6612::MotorId id;
   pid::PID* pid_ptr;
   float ke;           // DC motor speed constant
-  float sp_rad_s;     // Desired angular velocity (rad/s)
-  float fb_rad_s;     // Actual angular velocity (rad/s)
-  float dt;           // Elapsed time between loops (s)
+  float sp_rad_s;     // Desired angular velocity
+  float fb_rad_s;     // Actual angular velocity
+  float dt_s;         // Elapsed time between loops
   float sp_volts;     // DC motor setpoint voltage
   float fb_volts;     // DC motor feedback voltage
   float u_volts;      // DC motor actuation voltage
@@ -48,15 +48,15 @@ static Timer t;
 
 // Variables
 static us_timestamp_t last_t_us = 0;
-static float dt = 0;
+static float dt_s = 0;
 static float pulses_2_rpm = 0;
+static float meas_vbatt = 0.0f;
+static float max_vbatt = 0.0f;
+static float wheel_speed_filt_alpha = 1.0f;
 static CtrlData r_motor_ctrl_data;
 static CtrlData l_motor_ctrl_data;
 static bool ctrl_active = false;
 static bool awaiting_stop = false;
-static float meas_vbatt = 0.0f;
-static float max_vbatt = 0.0f;
-static float wheel_speed_filt_alpha = 1.0f;
 
 static const float MIN_V = 0.0f;
 static const float PULSES_2_REVS = (1.0f / PULSES_PER_REV) * 2 * 3.14159;
@@ -88,7 +88,7 @@ void runMotorControls(void)
   while (1)
   {
     // Determine the max actuation voltage based on the vbatt measurement
-    meas_vbatt = LpFilter(readBatteryVoltage(), meas_vbatt, VBATT_FILT_ALPHA);
+    meas_vbatt = lpFilter(readBatteryVoltage(), meas_vbatt, VBATT_FILT_ALPHA);
 
     if (meas_vbatt < MAX_MOTOR_VOLTAGE)
     {
@@ -99,32 +99,32 @@ void runMotorControls(void)
       max_vbatt = MAX_MOTOR_VOLTAGE - tb6612::vdrop;
     }
 
-    // Compute the dt between executions
+    // Compute the dt_s between executions
     us_timestamp_t current_t_us = t.read_high_resolution_us();
 
     if (0 != last_t_us)
     {
-      r_motor_ctrl_data.dt = (current_t_us - last_t_us) * 1e-6;
-      l_motor_ctrl_data.dt = r_motor_ctrl_data.dt;
+      r_motor_ctrl_data.dt_s = (current_t_us - last_t_us) * US_2_S;
+      l_motor_ctrl_data.dt_s = r_motor_ctrl_data.dt_s;
     }
     else
     {
-      r_motor_ctrl_data.dt = CYCLE_TIME_MS * 1e-3;
-      l_motor_ctrl_data.dt = r_motor_ctrl_data.dt;
+      r_motor_ctrl_data.dt_s = CYCLE_TIME_MS * MS_2_S;
+      l_motor_ctrl_data.dt_s = r_motor_ctrl_data.dt_s;
     }
 
     last_t_us = current_t_us;
 
-    pulses_2_rpm = PULSES_2_REVS * (1 / r_motor_ctrl_data.dt);
+    pulses_2_rpm = PULSES_2_REVS / r_motor_ctrl_data.dt_s;
 
     if (ctrl_data_mutex.trylock())
     {
       // Measure the current wheel speeds via the encoders
       r_motor_ctrl_data.fb_rad_s =
-          LpFilter(r_encoder.getPulses() * pulses_2_rpm, r_motor_ctrl_data.fb_rad_s, wheel_speed_filt_alpha);
+          lpFilter(r_encoder.getPulses() * pulses_2_rpm, r_motor_ctrl_data.fb_rad_s, wheel_speed_filt_alpha);
 
       l_motor_ctrl_data.fb_rad_s =
-          LpFilter(l_encoder.getPulses() * pulses_2_rpm, l_motor_ctrl_data.fb_rad_s, wheel_speed_filt_alpha);
+          lpFilter(l_encoder.getPulses() * pulses_2_rpm, l_motor_ctrl_data.fb_rad_s, wheel_speed_filt_alpha);
 
       ctrl_data_mutex.unlock();
 
@@ -163,8 +163,6 @@ void runMotorControls(void)
 
 static void runController(CtrlData* ctrl_data)
 {
-  tb6612::Direction dir = tb6612::UNKNOWN_DIR;
-
   // Compute the voltage set point
   ctrl_data->sp_volts = ctrl_data->sp_rad_s * ctrl_data->ke;
 
@@ -175,12 +173,11 @@ static void runController(CtrlData* ctrl_data)
   // Run the PID controller
   ctrl_data->u_volts = ctrl_data->pid_ptr->step(ctrl_data->sp_volts, \
                                                 ctrl_data->fb_volts, \
-                                                ctrl_data->dt, \
+                                                ctrl_data->dt_s, \
                                                 max_vbatt, MIN_V);
 #else
   // Saturate the set points to be within the actuator voltage range
-  int8_t sign;
-  sign = signbit(ctrl_data->sp_volts) ? -1 : 1;
+  const int8_t sign = signbit(ctrl_data->sp_volts) ? -1 : 1;
   ctrl_data->u_volts = fabs(ctrl_data->sp_volts) < max_vbatt ? ctrl_data->sp_volts : sign * max_vbatt;
 #endif  // OPEN_LOOP
 
@@ -188,7 +185,7 @@ static void runController(CtrlData* ctrl_data)
   ctrl_data->u_percent = (uint8_t)(fabs(ctrl_data->u_volts) * (100 / meas_vbatt));
 
   // Determine direction
-  dir = signbit(ctrl_data->u_volts) ? tb6612::REVERSE : tb6612::FORWARD;
+  const tb6612::Direction dir = signbit(ctrl_data->u_volts) ? tb6612::REVERSE : tb6612::FORWARD;
 
   // Set the motor direction
   motor_driver.setDirection(ctrl_data->id, dir);
@@ -196,7 +193,7 @@ static void runController(CtrlData* ctrl_data)
 
 void getWheelAngVSp(WheelAngV* dest)
 {
-  if (dest)
+  if (NULL != dest)
   {
     dest->r = r_motor_ctrl_data.sp_rad_s;
     dest->l = l_motor_ctrl_data.sp_rad_s;
@@ -211,7 +208,7 @@ void getWheelAngV(WheelAngV* dest)
 {
   ctrl_data_mutex.lock();
 
-  if (dest)
+  if (NULL != dest)
   {
     dest->r = r_motor_ctrl_data.fb_rad_s;
     dest->l = l_motor_ctrl_data.fb_rad_s;
@@ -226,8 +223,8 @@ void getWheelAngV(WheelAngV* dest)
 
 void updateMotorControllerInputs(const oscar_pi::cmd& cmd_msg)
 {
-  pid::Gains r_gains = {0.0f};
-  pid::Gains l_gains = {0.0f};
+  pid::Gains r_gains = { 0.0f };
+  pid::Gains l_gains = { 0.0f };
 
   if (0 == cmd_msg.stop)
   {

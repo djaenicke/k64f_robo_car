@@ -2,7 +2,7 @@
 #define LP_FILTER_H_
 
 template <class T>
-T LpFilter(T x, T y_n_1, float alpha)
+T lpFilter(T x, T y_n_1, float alpha)
 {
   T y;
 
