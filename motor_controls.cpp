@@ -18,9 +18,8 @@
 
 typedef struct
 {
-  tb6612::Motor_Id_T id;
+  tb6612::MotorId id;
   pid::PID* pid_ptr;
-  uint32_t cnt;
   float ke;           // DC motor speed constant
   float sp_rad_s;     // Desired angular velocity (rad/s)
   float fb_rad_s;     // Actual angular velocity (rad/s)
@@ -70,7 +69,7 @@ void initMotorControls(void)
   (void)memset(&r_motor_ctrl_data, 0, sizeof(r_motor_ctrl_data));
   (void)memset(&l_motor_ctrl_data, 0, sizeof(l_motor_ctrl_data));
 
-  motor_driver.SetPWMPeriod(0.0001);
+  motor_driver.setPWMPeriod(0.0001);
 
   r_motor_ctrl_data.ke = R_Ke;
   l_motor_ctrl_data.ke = L_Ke;
@@ -122,10 +121,10 @@ void runMotorControls(void)
     {
       // Measure the current wheel speeds via the encoders
       r_motor_ctrl_data.fb_rad_s =
-          LpFilter(r_encoder.GetPulses() * pulses_2_rpm, r_motor_ctrl_data.fb_rad_s, wheel_speed_filt_alpha);
+          LpFilter(r_encoder.getPulses() * pulses_2_rpm, r_motor_ctrl_data.fb_rad_s, wheel_speed_filt_alpha);
 
       l_motor_ctrl_data.fb_rad_s =
-          LpFilter(l_encoder.GetPulses() * pulses_2_rpm, l_motor_ctrl_data.fb_rad_s, wheel_speed_filt_alpha);
+          LpFilter(l_encoder.getPulses() * pulses_2_rpm, l_motor_ctrl_data.fb_rad_s, wheel_speed_filt_alpha);
 
       ctrl_data_mutex.unlock();
 
@@ -138,19 +137,19 @@ void runMotorControls(void)
         if (awaiting_stop && (fabs(r_motor_ctrl_data.fb_rad_s) < STOP_THRESHOLD) &&
             (fabs(l_motor_ctrl_data.fb_rad_s) < STOP_THRESHOLD))
         {
-          motor_driver.Freewheel();
+          motor_driver.freewheel();
           ctrl_active = false;
           awaiting_stop = false;
         }
         else
         {
-          motor_driver.SetDC(R_MOTOR, r_motor_ctrl_data.u_percent);
-          motor_driver.SetDC(L_MOTOR, l_motor_ctrl_data.u_percent);
+          motor_driver.setDutyCycle(R_MOTOR, r_motor_ctrl_data.u_percent);
+          motor_driver.setDutyCycle(L_MOTOR, l_motor_ctrl_data.u_percent);
         }
       }
       else
       {
-        motor_driver.Freewheel();
+        motor_driver.freewheel();
       }
 
       ThisThread::sleep_for(CYCLE_TIME_MS);
@@ -164,9 +163,7 @@ void runMotorControls(void)
 
 static void runController(CtrlData* ctrl_data)
 {
-  tb6612::Direction_T dir = tb6612::UNKNOWN_DIR;
-
-  ctrl_data->cnt++;
+  tb6612::Direction dir = tb6612::UNKNOWN_DIR;
 
   // Compute the voltage set point
   ctrl_data->sp_volts = ctrl_data->sp_rad_s * ctrl_data->ke;
@@ -176,7 +173,7 @@ static void runController(CtrlData* ctrl_data)
 
 #if 0 == OPEN_LOOP
   // Run the PID controller
-  ctrl_data->u_volts = ctrl_data->pid_ptr->Step(ctrl_data->sp_volts, \
+  ctrl_data->u_volts = ctrl_data->pid_ptr->step(ctrl_data->sp_volts, \
                                                 ctrl_data->fb_volts, \
                                                 ctrl_data->dt, \
                                                 max_vbatt, MIN_V);
@@ -194,7 +191,7 @@ static void runController(CtrlData* ctrl_data)
   dir = signbit(ctrl_data->u_volts) ? tb6612::REVERSE : tb6612::FORWARD;
 
   // Set the motor direction
-  motor_driver.SetDirection(ctrl_data->id, dir);
+  motor_driver.setDirection(ctrl_data->id, dir);
 }
 
 void getWheelAngVSp(WheelAngV* dest)
@@ -229,8 +226,8 @@ void getWheelAngV(WheelAngV* dest)
 
 void updateMotorControllerInputs(const oscar_pi::cmd& cmd_msg)
 {
-  pid::Gains_T r_gains = {0.0f};
-  pid::Gains_T l_gains = {0.0f};
+  pid::Gains r_gains = {0.0f};
+  pid::Gains l_gains = {0.0f};
 
   if (0 == cmd_msg.stop)
   {
@@ -249,12 +246,12 @@ void updateMotorControllerInputs(const oscar_pi::cmd& cmd_msg)
   r_gains.kp = cmd_msg.r_kp;
   r_gains.ki = cmd_msg.r_ki;
   r_gains.kd = cmd_msg.r_kd;
-  r_pid.Reset(&r_gains);
+  r_pid.reset(&r_gains);
 
   l_gains.kp = cmd_msg.l_kp;
   l_gains.ki = cmd_msg.l_ki;
   l_gains.kd = cmd_msg.l_kd;
-  l_pid.Reset(&l_gains);
+  l_pid.reset(&l_gains);
 
   ctrl_active = true;
 }
