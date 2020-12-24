@@ -69,6 +69,8 @@ int main()
   fwd_uss_range_msg.min_range = hc_sr04::HC_SR04::MIN_RANGE_M;
   fwd_uss_range_msg.max_range = hc_sr04::HC_SR04::MAX_RANGE_M;
 
+  state_msg.header.frame_id = "base_link";
+
   // Start the motor controls thread
   motor_controls_thread.start(runMotorControls);
 
