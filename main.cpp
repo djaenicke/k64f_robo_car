@@ -6,7 +6,6 @@
 
 #include "battery_monitor.h"
 #include "config.h"
-#include "fxos8700.h"
 #include "hc_sr04.h"
 #include "io_abstraction.h"
 #include "mbed.h"
@@ -27,12 +26,10 @@ static rgb_led::RgbLed status_indicator(LED_RED, LED_GREEN, LED_BLUE);
 static Thread motor_controls_thread(osPriorityRealtime);
 
 // Sensor objects/variables
-static mpu6050::MPU6050 imu1(I2C_SDA, I2C_SCL, mpu6050::AFS_2G, mpu6050::GFS_250DPS);
-static fxos8700::FXOS8700 imu2(I2C_SDA, I2C_SCL, fxos8700::FXOS_2G);
+static mpu6050::MPU6050 imu(I2C_SDA, I2C_SCL, mpu6050::AFS_2G, mpu6050::GFS_250DPS);
 static hc_sr04::HC_SR04 fwd_uss(FWD_USS_TRIGGER, FWD_USS_ECHO);
 static mpu6050::AccelData mpu_accel_data;
 static mpu6050::GyroData mpu_gyro_data;
-static fxos8700::SensorData fxos_data;
 static WheelAngV wheel_speed_sp;
 static WheelAngV wheel_speed_fb;
 
@@ -53,8 +50,7 @@ int main()
   // the user doesn't affect the calibration process by touching the robot
   ThisThread::sleep_for(IMU_CALIBRATION_DELAY_MS);
 
-  imu1.init();
-  imu2.init();
+  imu.init();
 
 #if ROS_ENABLED
   nh.initNode();
@@ -72,6 +68,8 @@ int main()
   fwd_uss_range_msg.field_of_view = hc_sr04::HC_SR04::FOV_RAD;
   fwd_uss_range_msg.min_range = hc_sr04::HC_SR04::MIN_RANGE_M;
   fwd_uss_range_msg.max_range = hc_sr04::HC_SR04::MAX_RANGE_M;
+
+  state_msg.header.frame_id = "base_link";
 
   // Start the motor controls thread
   motor_controls_thread.start(runMotorControls);
@@ -118,20 +116,12 @@ void populateStateMsg(void)
   state_msg.l_wheel_fb = wheel_speed_fb.l;
   state_msg.r_wheel_fb = wheel_speed_fb.r;
 
-  imu2.readData(&fxos_data);
-  state_msg.fxos_ax = -1.0F * fxos_data.ay;
-  state_msg.fxos_ay = fxos_data.ax;
-  state_msg.fxos_az = fxos_data.az;
-  state_msg.fxos_mx = fxos_data.mx;
-  state_msg.fxos_my = fxos_data.my;
-  state_msg.fxos_mz = fxos_data.mz;
-
-  imu1.readAccelData(&mpu_accel_data);
+  imu.readAccelData(&mpu_accel_data);
   state_msg.mpu_ax = -1.0F * mpu_accel_data.ax;
   state_msg.mpu_ay = -1.0F * mpu_accel_data.ay;
   state_msg.mpu_az = mpu_accel_data.az;
 
-  imu1.readGyroData(&mpu_gyro_data);
+  imu.readGyroData(&mpu_gyro_data);
   state_msg.mpu_gx = mpu_gyro_data.gx;
   state_msg.mpu_gy = mpu_gyro_data.gy;
   state_msg.mpu_gz = mpu_gyro_data.gz;

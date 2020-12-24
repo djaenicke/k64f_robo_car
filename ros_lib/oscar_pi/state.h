@@ -37,18 +37,6 @@ namespace oscar_pi
       _mpu_gy_type mpu_gy;
       typedef float _mpu_gz_type;
       _mpu_gz_type mpu_gz;
-      typedef float _fxos_ax_type;
-      _fxos_ax_type fxos_ax;
-      typedef float _fxos_ay_type;
-      _fxos_ay_type fxos_ay;
-      typedef float _fxos_az_type;
-      _fxos_az_type fxos_az;
-      typedef float _fxos_mx_type;
-      _fxos_mx_type fxos_mx;
-      typedef float _fxos_my_type;
-      _fxos_my_type fxos_my;
-      typedef float _fxos_mz_type;
-      _fxos_mz_type fxos_mz;
 
     state():
       header(),
@@ -62,13 +50,7 @@ namespace oscar_pi
       mpu_az(0),
       mpu_gx(0),
       mpu_gy(0),
-      mpu_gz(0),
-      fxos_ax(0),
-      fxos_ay(0),
-      fxos_az(0),
-      fxos_mx(0),
-      fxos_my(0),
-      fxos_mz(0)
+      mpu_gz(0)
     {
     }
 
@@ -186,66 +168,6 @@ namespace oscar_pi
       *(outbuffer + offset + 2) = (u_mpu_gz.base >> (8 * 2)) & 0xFF;
       *(outbuffer + offset + 3) = (u_mpu_gz.base >> (8 * 3)) & 0xFF;
       offset += sizeof(this->mpu_gz);
-      union {
-        float real;
-        uint32_t base;
-      } u_fxos_ax;
-      u_fxos_ax.real = this->fxos_ax;
-      *(outbuffer + offset + 0) = (u_fxos_ax.base >> (8 * 0)) & 0xFF;
-      *(outbuffer + offset + 1) = (u_fxos_ax.base >> (8 * 1)) & 0xFF;
-      *(outbuffer + offset + 2) = (u_fxos_ax.base >> (8 * 2)) & 0xFF;
-      *(outbuffer + offset + 3) = (u_fxos_ax.base >> (8 * 3)) & 0xFF;
-      offset += sizeof(this->fxos_ax);
-      union {
-        float real;
-        uint32_t base;
-      } u_fxos_ay;
-      u_fxos_ay.real = this->fxos_ay;
-      *(outbuffer + offset + 0) = (u_fxos_ay.base >> (8 * 0)) & 0xFF;
-      *(outbuffer + offset + 1) = (u_fxos_ay.base >> (8 * 1)) & 0xFF;
-      *(outbuffer + offset + 2) = (u_fxos_ay.base >> (8 * 2)) & 0xFF;
-      *(outbuffer + offset + 3) = (u_fxos_ay.base >> (8 * 3)) & 0xFF;
-      offset += sizeof(this->fxos_ay);
-      union {
-        float real;
-        uint32_t base;
-      } u_fxos_az;
-      u_fxos_az.real = this->fxos_az;
-      *(outbuffer + offset + 0) = (u_fxos_az.base >> (8 * 0)) & 0xFF;
-      *(outbuffer + offset + 1) = (u_fxos_az.base >> (8 * 1)) & 0xFF;
-      *(outbuffer + offset + 2) = (u_fxos_az.base >> (8 * 2)) & 0xFF;
-      *(outbuffer + offset + 3) = (u_fxos_az.base >> (8 * 3)) & 0xFF;
-      offset += sizeof(this->fxos_az);
-      union {
-        float real;
-        uint32_t base;
-      } u_fxos_mx;
-      u_fxos_mx.real = this->fxos_mx;
-      *(outbuffer + offset + 0) = (u_fxos_mx.base >> (8 * 0)) & 0xFF;
-      *(outbuffer + offset + 1) = (u_fxos_mx.base >> (8 * 1)) & 0xFF;
-      *(outbuffer + offset + 2) = (u_fxos_mx.base >> (8 * 2)) & 0xFF;
-      *(outbuffer + offset + 3) = (u_fxos_mx.base >> (8 * 3)) & 0xFF;
-      offset += sizeof(this->fxos_mx);
-      union {
-        float real;
-        uint32_t base;
-      } u_fxos_my;
-      u_fxos_my.real = this->fxos_my;
-      *(outbuffer + offset + 0) = (u_fxos_my.base >> (8 * 0)) & 0xFF;
-      *(outbuffer + offset + 1) = (u_fxos_my.base >> (8 * 1)) & 0xFF;
-      *(outbuffer + offset + 2) = (u_fxos_my.base >> (8 * 2)) & 0xFF;
-      *(outbuffer + offset + 3) = (u_fxos_my.base >> (8 * 3)) & 0xFF;
-      offset += sizeof(this->fxos_my);
-      union {
-        float real;
-        uint32_t base;
-      } u_fxos_mz;
-      u_fxos_mz.real = this->fxos_mz;
-      *(outbuffer + offset + 0) = (u_fxos_mz.base >> (8 * 0)) & 0xFF;
-      *(outbuffer + offset + 1) = (u_fxos_mz.base >> (8 * 1)) & 0xFF;
-      *(outbuffer + offset + 2) = (u_fxos_mz.base >> (8 * 2)) & 0xFF;
-      *(outbuffer + offset + 3) = (u_fxos_mz.base >> (8 * 3)) & 0xFF;
-      offset += sizeof(this->fxos_mz);
       return offset;
     }
 
@@ -374,77 +296,11 @@ namespace oscar_pi
       u_mpu_gz.base |= ((uint32_t) (*(inbuffer + offset + 3))) << (8 * 3);
       this->mpu_gz = u_mpu_gz.real;
       offset += sizeof(this->mpu_gz);
-      union {
-        float real;
-        uint32_t base;
-      } u_fxos_ax;
-      u_fxos_ax.base = 0;
-      u_fxos_ax.base |= ((uint32_t) (*(inbuffer + offset + 0))) << (8 * 0);
-      u_fxos_ax.base |= ((uint32_t) (*(inbuffer + offset + 1))) << (8 * 1);
-      u_fxos_ax.base |= ((uint32_t) (*(inbuffer + offset + 2))) << (8 * 2);
-      u_fxos_ax.base |= ((uint32_t) (*(inbuffer + offset + 3))) << (8 * 3);
-      this->fxos_ax = u_fxos_ax.real;
-      offset += sizeof(this->fxos_ax);
-      union {
-        float real;
-        uint32_t base;
-      } u_fxos_ay;
-      u_fxos_ay.base = 0;
-      u_fxos_ay.base |= ((uint32_t) (*(inbuffer + offset + 0))) << (8 * 0);
-      u_fxos_ay.base |= ((uint32_t) (*(inbuffer + offset + 1))) << (8 * 1);
-      u_fxos_ay.base |= ((uint32_t) (*(inbuffer + offset + 2))) << (8 * 2);
-      u_fxos_ay.base |= ((uint32_t) (*(inbuffer + offset + 3))) << (8 * 3);
-      this->fxos_ay = u_fxos_ay.real;
-      offset += sizeof(this->fxos_ay);
-      union {
-        float real;
-        uint32_t base;
-      } u_fxos_az;
-      u_fxos_az.base = 0;
-      u_fxos_az.base |= ((uint32_t) (*(inbuffer + offset + 0))) << (8 * 0);
-      u_fxos_az.base |= ((uint32_t) (*(inbuffer + offset + 1))) << (8 * 1);
-      u_fxos_az.base |= ((uint32_t) (*(inbuffer + offset + 2))) << (8 * 2);
-      u_fxos_az.base |= ((uint32_t) (*(inbuffer + offset + 3))) << (8 * 3);
-      this->fxos_az = u_fxos_az.real;
-      offset += sizeof(this->fxos_az);
-      union {
-        float real;
-        uint32_t base;
-      } u_fxos_mx;
-      u_fxos_mx.base = 0;
-      u_fxos_mx.base |= ((uint32_t) (*(inbuffer + offset + 0))) << (8 * 0);
-      u_fxos_mx.base |= ((uint32_t) (*(inbuffer + offset + 1))) << (8 * 1);
-      u_fxos_mx.base |= ((uint32_t) (*(inbuffer + offset + 2))) << (8 * 2);
-      u_fxos_mx.base |= ((uint32_t) (*(inbuffer + offset + 3))) << (8 * 3);
-      this->fxos_mx = u_fxos_mx.real;
-      offset += sizeof(this->fxos_mx);
-      union {
-        float real;
-        uint32_t base;
-      } u_fxos_my;
-      u_fxos_my.base = 0;
-      u_fxos_my.base |= ((uint32_t) (*(inbuffer + offset + 0))) << (8 * 0);
-      u_fxos_my.base |= ((uint32_t) (*(inbuffer + offset + 1))) << (8 * 1);
-      u_fxos_my.base |= ((uint32_t) (*(inbuffer + offset + 2))) << (8 * 2);
-      u_fxos_my.base |= ((uint32_t) (*(inbuffer + offset + 3))) << (8 * 3);
-      this->fxos_my = u_fxos_my.real;
-      offset += sizeof(this->fxos_my);
-      union {
-        float real;
-        uint32_t base;
-      } u_fxos_mz;
-      u_fxos_mz.base = 0;
-      u_fxos_mz.base |= ((uint32_t) (*(inbuffer + offset + 0))) << (8 * 0);
-      u_fxos_mz.base |= ((uint32_t) (*(inbuffer + offset + 1))) << (8 * 1);
-      u_fxos_mz.base |= ((uint32_t) (*(inbuffer + offset + 2))) << (8 * 2);
-      u_fxos_mz.base |= ((uint32_t) (*(inbuffer + offset + 3))) << (8 * 3);
-      this->fxos_mz = u_fxos_mz.real;
-      offset += sizeof(this->fxos_mz);
      return offset;
     }
 
     virtual const char * getType() override { return "oscar_pi/state"; };
-    virtual const char * getMD5() override { return "48af4300d58bd0ac1c5582c7bbeb2457"; };
+    virtual const char * getMD5() override { return "418abf0e83674d868a869bafb917552e"; };
 
   };
 
